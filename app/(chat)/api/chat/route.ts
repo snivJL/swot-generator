@@ -70,7 +70,6 @@ export async function POST(request: Request) {
   } catch (_) {
     return new ChatSDKError('bad_request:api').toResponse();
   }
-
   try {
     const { id, message, selectedChatModel, selectedVisibilityType } =
       requestBody;
@@ -81,6 +80,7 @@ export async function POST(request: Request) {
       return new ChatSDKError('unauthorized:chat').toResponse();
     }
 
+    
     const userType: UserType = session.user.type;
 
     const messageCount = await getMessageCountByUserId({
@@ -93,31 +93,34 @@ export async function POST(request: Request) {
     }
 
     const chat = await getChatById({ id });
-
+    console.log(chat)
     if (!chat) {
       const title = await generateTitleFromUserMessage({
         message,
       });
-
+      console.log("Title",title)
       await saveChat({
         id,
         userId: session.user.id,
         title,
         visibility: selectedVisibilityType,
       });
+      console.log("chat saved")
     } else {
       if (chat.userId !== session.user.id) {
         return new ChatSDKError('forbidden:chat').toResponse();
       }
     }
-
+    console.log("CHAT",chat)
     const previousMessages = await getMessagesByChatId({ id });
+        console.log("previousMessages",previousMessages)
 
     const messages = appendClientMessage({
       // @ts-expect-error: todo add type conversion from DBMessage[] to UIMessage[]
       messages: previousMessages,
       message,
     });
+
 
     const { longitude, latitude, city, country } = geolocation(request);
 
