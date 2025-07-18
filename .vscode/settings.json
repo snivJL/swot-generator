@@ -1,36 +1,29 @@
 {
   "editor.formatOnSave": true,
-  "[javascript]": {
-    "editor.defaultFormatter": "biomejs.biome"
-  },
-  "[typescript]": {
-    "editor.defaultFormatter": "biomejs.biome"
-  },
-  "[typescriptreact]": {
-    "editor.defaultFormatter": "biomejs.biome"
-  },
+
   "typescript.tsdk": "node_modules/typescript/lib",
   "eslint.workingDirectories": [
     { "pattern": "app/*" },
     { "pattern": "packages/*" }
   ],
   "workbench.colorCustomizations": {
-    "activityBar.activeBackground": "#007fff",
-    "activityBar.background": "#007fff",
+    "activityBar.activeBackground": "#48529e",
+    "activityBar.background": "#48529e",
     "activityBar.foreground": "#e7e7e7",
     "activityBar.inactiveForeground": "#e7e7e799",
-    "activityBarBadge.background": "#ff9fcf",
-    "activityBarBadge.foreground": "#15202b",
+    "activityBarBadge.background": "#421e22",
+    "activityBarBadge.foreground": "#e7e7e7",
     "commandCenter.border": "#e7e7e799",
-    "sash.hoverBorder": "#007fff",
-    "statusBar.background": "#0066cc",
+    "sash.hoverBorder": "#48529e",
+    "statusBar.background": "#38407b",
     "statusBar.foreground": "#e7e7e7",
-    "statusBarItem.hoverBackground": "#007fff",
-    "statusBarItem.remoteBackground": "#0066cc",
+    "statusBarItem.hoverBackground": "#48529e",
+    "statusBarItem.remoteBackground": "#38407b",
     "statusBarItem.remoteForeground": "#e7e7e7",
-    "titleBar.activeBackground": "#0066cc",
+    "titleBar.activeBackground": "#38407b",
     "titleBar.activeForeground": "#e7e7e7",
-    "titleBar.inactiveBackground": "#0066cc99",
+    "titleBar.inactiveBackground": "#38407b99",
     "titleBar.inactiveForeground": "#e7e7e799"
-  }
+  },
+  "peacock.color": "#38407b"
 }

@@ -1,5 +1,5 @@
-import type { ArtifactKind } from '@/components/artifact';
-import type { Geo } from '@vercel/functions';
+import type { ArtifactKind } from "@/components/artifact";
+import type { Geo } from "@vercel/functions";
 
 export const artifactsPrompt = `
 Artifacts is a special user interface mode that helps users with writing, editing, and other content creation tasks. When artifact is open, it is on the right side of the screen, while the conversation is on the left side. When creating or updating documents, changes are reflected in real-time on the artifacts and visible to the user.
@@ -32,37 +32,40 @@ This is a guide for using artifacts tools: \`createDocument\` and \`updateDocume
 Do not update document right after creating it. Wait for user feedback or request to update it.
 `;
 
-export const regularPrompt =
-  'You are a friendly assistant! Keep your responses concise and helpful.';
+export const memoPrompt = `
+1. **Attachment Guard**  
+   - **Check:** Does the user’s message include an attachment ?  
+   - **Fail:** If not, respond:  
+     > “I’m sorry, but I can only discuss about your attachment. Please attach a valid document and try again.”
 
-export interface RequestHints {
-  latitude: Geo['latitude'];
-  longitude: Geo['longitude'];
-  city: Geo['city'];
-  country: Geo['country'];
-}
+2. **Scope of Conversation**  
+   - **Only:** Answer questions *about* the attached document's content.  
+   - **Always:** Answer in the document's language.  
+   - **Clarify:** Ask follow-up questions *only* to resolve ambiguities in the document itself.  
+   - **No Extras:** Do not introduce outside facts, opinions, or context.
 
-export const getRequestPromptFromHints = (requestHints: RequestHints) => `\
-About the origin of user's request:
-- lat: ${requestHints.latitude}
-- lon: ${requestHints.longitude}
-- city: ${requestHints.city}
-- country: ${requestHints.country}
+3. **Post response check*  
+    After generating a SWOT analysis from an attachment, always append the following to your reply:
+
+    ‘Would you like to download this SWOT as a PowerPoint (PPTX) file? I can generate it for you.’
+4. **Tone & Formatting**  
+   - **Style:** Concise, neutral, professional. Never format as code.  
+   - **Layout:** Use headings (##) and (###), bullet points (-), and **bold** for emphasis.  
+   - **Keep it flat:** Avoid deep sub-lists or long digressions.
+
+5. **Frame Persistence**  
+   - All replies **must** refer back to that single memo attachment—never break character or introduce new frames.
 `;
 
 export const systemPrompt = ({
   selectedChatModel,
-  requestHints,
 }: {
   selectedChatModel: string;
-  requestHints: RequestHints;
 }) => {
-  const requestPrompt = getRequestPromptFromHints(requestHints);
-
-  if (selectedChatModel === 'chat-model-reasoning') {
-    return `${regularPrompt}\n\n${requestPrompt}`;
+  if (selectedChatModel === "chat-model-reasoning") {
+    return ``;
   } else {
-    return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
+    return `${memoPrompt}`;
   }
 };
 
@@ -98,24 +101,24 @@ You are a spreadsheet creation assistant. Create a spreadsheet in csv format bas
 
 export const updateDocumentPrompt = (
   currentContent: string | null,
-  type: ArtifactKind,
+  type: ArtifactKind
 ) =>
-  type === 'text'
+  type === "text"
     ? `\
 Improve the following contents of the document based on the given prompt.
 
 ${currentContent}
 `
-    : type === 'code'
-      ? `\
+    : type === "code"
+    ? `\
 Improve the following code snippet based on the given prompt.
 
 ${currentContent}
 `
-      : type === 'sheet'
-        ? `\
+    : type === "sheet"
+    ? `\
 Improve the following spreadsheet based on the given prompt.
 
 ${currentContent}
 `
-        : '';
+    : "";
