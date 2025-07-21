@@ -19,10 +19,6 @@ import {
 } from "@/lib/db/queries";
 import { generateUUID, getTrailingMessageId } from "@/lib/utils";
 import { generateTitleFromUserMessage } from "../../actions";
-import { createDocument } from "@/lib/ai/tools/create-document";
-import { updateDocument } from "@/lib/ai/tools/update-document";
-import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
-import { getWeather } from "@/lib/ai/tools/get-weather";
 import { isProductionEnvironment } from "@/lib/constants";
 import { myProvider } from "@/lib/ai/providers";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
@@ -36,6 +32,8 @@ import type { Chat } from "@/lib/db/schema";
 import { differenceInSeconds } from "date-fns";
 import { ChatSDKError } from "@/lib/errors";
 import { createSwot } from "@/lib/ai/tools/create-swot";
+import { formatMemo } from "@/lib/ai/tools/format-memo";
+import { createMemo } from "@/lib/ai/tools/create-memo";
 
 export const maxDuration = 60;
 
@@ -140,24 +138,14 @@ export async function POST(request: Request) {
           maxSteps: 5,
           experimental_activeTools:
             selectedChatModel === "chat-model-reasoning"
-              ? ["createSwot"]
-              : [
-                  "getWeather",
-                  "createDocument",
-                  "updateDocument",
-                  "requestSuggestions",
-                ],
+              ? ["createSwot", "formatMemo", "createMemo"]
+              : [],
           experimental_transform: smoothStream({ chunking: "word" }),
           experimental_generateMessageId: generateUUID,
           tools: {
-            getWeather,
             createSwot: createSwot({ dataStream }),
-            createDocument: createDocument({ session, dataStream }),
-            updateDocument: updateDocument({ session, dataStream }),
-            requestSuggestions: requestSuggestions({
-              session,
-              dataStream,
-            }),
+            formatMemo,
+            createMemo,
           },
           onFinish: async ({ response }) => {
             if (session.user?.id) {

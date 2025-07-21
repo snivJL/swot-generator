@@ -190,7 +190,6 @@ const PurePreviewMessage = ({
 
                 if (state === "result") {
                   const { result } = toolInvocation;
-                  console.log(toolName);
                   return (
                     <div key={toolCallId}>
                       {toolName === "getWeather" ? (
@@ -213,6 +212,10 @@ const PurePreviewMessage = ({
                           isReadonly={isReadonly}
                         />
                       ) : toolName === "createSwot" ? (
+                        <a href={result.url}>{`Download ${result.title}`}</a>
+                      ) : toolName === "formatMemo" ? (
+                        <p>Formatting your output...</p>
+                      ) : toolName === "createMemo" ? (
                         <a href={result.url}>{`Download ${result.title}`}</a>
                       ) : (
                         <pre>{JSON.stringify(result, null, 2)}</pre>

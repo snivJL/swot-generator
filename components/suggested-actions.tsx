@@ -1,86 +1,283 @@
 "use client";
 
-import { motion } from "framer-motion";
+import type React from "react";
+
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "./ui/button";
-import { memo } from "react";
+import { memo, useState } from "react";
 import type { UseChatHelpers } from "@ai-sdk/react";
-import type { VisibilityType } from "./visibility-selector";
-import { Attachment } from "ai";
+import type { Attachment } from "ai";
 import equal from "fast-deep-equal";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "./ui/drawer";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
+import { BarChart3, Search, Sparkles, TrendingUp, Shield } from "lucide-react";
+
+interface SuggestedAction {
+  question: string;
+  action: string;
+}
+
+interface ActionCategory {
+  id: string;
+  name: string;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  actions: SuggestedAction[];
+}
 
 interface SuggestedActionsProps {
   chatId: string;
   append: UseChatHelpers["append"];
-  selectedVisibilityType: VisibilityType;
   attachments: Array<Attachment>;
+  mode?: "initial" | "drawer";
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
+
+const actionCategories: ActionCategory[] = [
+  {
+    id: "screening",
+    name: "Screening & Initial",
+    icon: Search,
+    color: "from-blue-500 to-cyan-500",
+    actions: [
+      {
+        question: "Explain the company's business model in simple terms",
+        action: "Explain the company's business model in simple terms.",
+      },
+      {
+        question: "Summarize the founding team and their relevant experience",
+        action: "Summarize the founding team and their relevant experience.",
+      },
+      {
+        question: "Give me the key financials for the last 2 years",
+        action: "Give me the key financials for the last 2 years.",
+      },
+      {
+        question:
+          "What are the strengths, weaknesses, opportunities and risks flagged?",
+        action:
+          "What are the strengths, weaknesses, opportunities and risks flagged in the documents?",
+      },
+    ],
+  },
+  {
+    id: "commercial",
+    name: "Commercial & Ops",
+    icon: BarChart3,
+    color: "from-green-500 to-teal-500",
+    actions: [
+      {
+        question: "Summarize the customer base and any concentration issues",
+        action: "Summarize the customer base and any concentration issues.",
+      },
+      {
+        question: "What does the sales and distribution model look like?",
+        action: "What does the sales and distribution model look like?",
+      },
+      {
+        question: "What initiatives has management outlined for growth?",
+        action: "What initiatives has management outlined for growth?",
+      },
+      {
+        question:
+          "Summarize the company's organizational structure and key roles",
+        action:
+          "Summarize the company's organizational structure and key roles.",
+      },
+    ],
+  },
+  {
+    id: "financial",
+    name: "Financial & DD",
+    icon: Shield,
+    color: "from-red-500 to-orange-500",
+    actions: [
+      {
+        question: "What debt or capital structure details are provided?",
+        action: "What debt or capital structure details are provided?",
+      },
+      {
+        question: "List any legal, regulatory, or compliance issues mentioned",
+        action: "List any legal, regulatory, or compliance issues mentioned.",
+      },
+      {
+        question:
+          "Are there any notes about recent or upcoming capital expenditures?",
+        action:
+          "Are there any notes about recent or upcoming capital expenditures?",
+      },
+      {
+        question: "Give me a list of due diligence follow up questions",
+        action: "Give me a list of due diligence follow up questions",
+      },
+    ],
+  },
+  {
+    id: "exit",
+    name: "Exit & Investment",
+    icon: TrendingUp,
+    color: "from-purple-500 to-pink-500",
+    actions: [
+      {
+        question: "List the key investment highlights mentioned",
+        action: "List the key investment highlights mentioned.",
+      },
+      {
+        question:
+          "Summarize how the company differentiates itself from competitors",
+        action:
+          "Summarize how the company differentiates itself from competitors.",
+      },
+      {
+        question:
+          "What rationale is given for a future buyer to be interested?",
+        action: "What rationale is given for a future buyer to be interested.",
+      },
+      {
+        question: "List any comparable companies or transactions mentioned",
+        action: "List any comparable companies or transactions mentioned.",
+      },
+    ],
+  },
+];
 
 function PureSuggestedActions({
   chatId,
   append,
-  selectedVisibilityType,
   attachments,
+  mode = "initial",
+  isOpen,
+  onOpenChange,
 }: SuggestedActionsProps) {
-  const suggestedActions = [
-    {
-      title: "Generate a SWOT",
-      action: "Generate a SWOT",
+  const [activeTab, setActiveTab] = useState(actionCategories[0].id);
+
+  const handleActionClick = async (action: string) => {
+    window.history.replaceState({}, "", `/chat/${chatId}`);
+    append({
+      role: "user",
+      content: action,
+      experimental_attachments: attachments,
+    });
+
+    if (mode === "drawer" && onOpenChange) {
+      onOpenChange(false);
+    }
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.05,
+      },
     },
-    {
-      title: "Write code to",
-      label: `demonstrate djikstra's algorithm`,
-      action: `Write code to demonstrate djikstra's algorithm`,
+  };
+
+  const actionVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.3,
+        ease: "easeOut",
+      },
     },
-    {
-      title: "Help me write an essay",
-      label: `about silicon valley`,
-      action: `Help me write an essay about silicon valley`,
-    },
-    {
-      title: "What is the weather",
-      label: "in San Francisco?",
-      action: "What is the weather in San Francisco?",
-    },
-  ];
+  };
+
+  const renderContent = () => (
+    <div className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-4 mb-6">
+          {actionCategories.map((category) => (
+            <TabsTrigger
+              key={category.id}
+              value={category.id}
+              className="text-xs sm:text-sm"
+            >
+              <span className="hidden sm:inline">{category.name}</span>
+              <span className="sm:hidden">{category.name.split(" ")[0]}</span>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        <AnimatePresence mode="wait">
+          {actionCategories.map((category) => (
+            <TabsContent key={category.id} value={category.id} className="mt-0">
+              {activeTab === category.id && (
+                <motion.div
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="hidden"
+                  className="grid gap-3"
+                >
+                  {category.actions.map((suggestedAction, actionIndex) => (
+                    <motion.div
+                      key={`${category.id}-${actionIndex}`}
+                      variants={actionVariants}
+                      whileHover={{
+                        scale: 1.02,
+                        transition: { duration: 0.2 },
+                      }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Button
+                        variant="ghost"
+                        onClick={() =>
+                          handleActionClick(suggestedAction.action)
+                        }
+                        className="relative group text-left border rounded-xl px-4 py-4 text-sm w-full h-auto justify-start items-start hover:border-primary/20 hover:bg-gradient-to-br hover:from-background hover:to-muted/50 transition-all duration-300 min-h-[40px]"
+                      >
+                        <div className="flex items-start w-full">
+                          <div className="flex-1">
+                            <span className="font-medium block leading-relaxed text-foreground">
+                              {suggestedAction.question}
+                            </span>
+                          </div>
+                        </div>
+
+                        <motion.div
+                          className={`absolute inset-0 rounded-xl bg-gradient-to-r ${category.color} opacity-0 group-hover:opacity-5`}
+                          initial={false}
+                          transition={{ duration: 0.3 }}
+                        />
+                      </Button>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
+            </TabsContent>
+          ))}
+        </AnimatePresence>
+      </Tabs>
+    </div>
+  );
+
+  if (mode === "drawer") {
+    return (
+      <Drawer open={isOpen} onOpenChange={onOpenChange}>
+        <DrawerContent className="max-h-[60vh]">
+          <DrawerHeader>
+            <DrawerTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5" />
+              Suggested Actions
+            </DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-6 overflow-y-auto">{renderContent()}</div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
 
   return (
     <div
       data-testid="suggested-actions"
-      className="grid sm:grid-cols-2 gap-2 w-full"
+      className="w-full max-w-5xl mx-auto p-6"
     >
-      {suggestedActions.map((suggestedAction, index) => (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
-          transition={{ delay: 0.05 * index }}
-          key={`suggested-action-${suggestedAction.title}-${index}`}
-          className={index > 1 ? "hidden sm:block" : "block"}
-        >
-          <Button
-            variant="ghost"
-            onClick={async () => {
-              window.history.replaceState({}, "", `/chat/${chatId}`);
-              console.log({
-                role: "user",
-                content: suggestedAction.action,
-                experimental_attachments: attachments,
-              });
-              append({
-                role: "user",
-                content: suggestedAction.action,
-                experimental_attachments: attachments,
-              });
-            }}
-            className="text-left border rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full h-auto justify-start items-start"
-          >
-            <span className="font-medium">{suggestedAction.title}</span>
-            <span className="text-muted-foreground">
-              {suggestedAction.label}
-            </span>
-          </Button>
-        </motion.div>
-      ))}
+      {renderContent()}
     </div>
   );
 }
@@ -89,8 +286,8 @@ export const SuggestedActions = memo(
   PureSuggestedActions,
   (prevProps, nextProps) => {
     if (prevProps.chatId !== nextProps.chatId) return false;
-    if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType)
-      return false;
+    if (prevProps.mode !== nextProps.mode) return false;
+    if (prevProps.isOpen !== nextProps.isOpen) return false;
     if (!equal(prevProps.attachments, nextProps.attachments)) return false;
     return true;
   }

@@ -133,17 +133,16 @@ export async function generateSwotPptx({
       w: 1.6,
       h: 0.8,
     });
-    console.log("Image added");
     // 2) SWOT grid: two rows, two columns under header
     const grid = [
-      { label: "Strengths", items: strengths, x: 0.4, y: 1.2 },
-      { label: "Weaknesses", items: weaknesses, x: 5.1, y: 1.2 },
-      { label: "Opportunities", items: opportunities, x: 0.4, y: 3.0 },
-      { label: "Threats", items: threats, x: 5.1, y: 3.0 },
+      { label: "Strengths", items: strengths, x: 0.4, y: 0.9 },
+      { label: "Weaknesses", items: weaknesses, x: 5.1, y: 0.9 },
+      { label: "Opportunities", items: opportunities, x: 0.4, y: 3.3 },
+      { label: "Threats", items: threats, x: 5.1, y: 3.3 },
     ];
     const colW = 4.5;
-    const rowH = 2;
-    const headerH = 0.5;
+    const rowH = 1.8;
+    const headerH = 0.4;
 
     grid.forEach(({ label, items, x, y }) => {
       // Black header bar for each quadrant
@@ -205,11 +204,9 @@ export async function generateSwotPptx({
 
     const filename = `swot-${Date.now()}.pptx`;
     const outPath = join("/tmp", filename);
-    console.log("wrting file");
-    // 2️⃣ Write the file on disk
+
     await pptx.writeFile({ fileName: outPath });
     const buffer = fs.readFileSync(outPath);
-    console.log("File on disc");
 
     fs.writeFileSync(`/tmp/${filename}`, buffer);
     const blob = await put(filename, buffer, {

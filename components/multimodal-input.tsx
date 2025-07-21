@@ -15,7 +15,6 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { useLocalStorage, useWindowSize } from "usehooks-ts";
-
 import { ArrowUpIcon, PaperclipIcon, StopIcon } from "./icons";
 import { PreviewAttachment } from "./preview-attachment";
 import { Button } from "./ui/button";
@@ -24,9 +23,8 @@ import { SuggestedActions } from "./suggested-actions";
 import equal from "fast-deep-equal";
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowDown } from "lucide-react";
+import { ArrowDown, Sparkles } from "lucide-react";
 import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
-import type { VisibilityType } from "./visibility-selector";
 
 function PureMultimodalInput({
   chatId,
@@ -41,7 +39,6 @@ function PureMultimodalInput({
   append,
   handleSubmit,
   className,
-  selectedVisibilityType,
 }: {
   chatId: string;
   input: UseChatHelpers["input"];
@@ -55,9 +52,9 @@ function PureMultimodalInput({
   append: UseChatHelpers["append"];
   handleSubmit: UseChatHelpers["handleSubmit"];
   className?: string;
-  selectedVisibilityType: VisibilityType;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const { width } = useWindowSize();
 
   useEffect(() => {
@@ -113,15 +110,12 @@ function PureMultimodalInput({
 
   const submitForm = useCallback(() => {
     window.history.replaceState({}, "", `/chat/${chatId}`);
-
     handleSubmit(undefined, {
       experimental_attachments: attachments,
     });
-
     setAttachments([]);
     setLocalStorageInput("");
     resetHeight();
-
     if (width && width > 768) {
       textareaRef.current?.focus();
     }
@@ -160,11 +154,10 @@ function PureMultimodalInput({
       toast.error("Failed to upload file, please try again!");
     }
   };
-  console.log(attachments);
+
   const handleFileChange = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(event.target.files || []);
-
       setUploadQueue(files.map((file) => file.name));
 
       try {
@@ -208,7 +201,7 @@ function PureMultimodalInput({
           >
             <Button
               data-testid="scroll-to-bottom-button"
-              className="rounded-full"
+              className="rounded-full bg-transparent"
               size="icon"
               variant="outline"
               onClick={(event) => {
@@ -222,12 +215,21 @@ function PureMultimodalInput({
         )}
       </AnimatePresence>
 
-      {messages.length === 0 && (
+      {messages.length === 0 ? (
         <SuggestedActions
           append={append}
           chatId={chatId}
           attachments={attachments}
-          selectedVisibilityType={selectedVisibilityType}
+          mode="initial"
+        />
+      ) : (
+        <SuggestedActions
+          append={append}
+          chatId={chatId}
+          attachments={attachments}
+          mode="drawer"
+          isOpen={drawerOpen}
+          onOpenChange={setDrawerOpen}
         />
       )}
 
@@ -248,7 +250,6 @@ function PureMultimodalInput({
           {attachments.map((attachment) => (
             <PreviewAttachment key={attachment.url} attachment={attachment} />
           ))}
-
           {uploadQueue.map((filename) => (
             <PreviewAttachment
               key={filename}
@@ -292,8 +293,30 @@ function PureMultimodalInput({
         }}
       />
 
-      <div className="absolute bottom-0 p-2 w-fit flex flex-row justify-start">
+      <div className="absolute bottom-0 left-0 p-2 w-fit flex flex-row items-center gap-2">
         <AttachmentsButton fileInputRef={fileInputRef} status={status} />
+
+        {/* Prompt Library Button - only show when there are messages */}
+        <AnimatePresence>
+          {messages.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Button
+                type="button"
+                onClick={() => setDrawerOpen(true)}
+                className="rounded-md p-[7px] h-fit dark:border-zinc-700 hover:dark:bg-zinc-900 hover:bg-zinc-200"
+                variant="ghost"
+                size="sm"
+              >
+                <Sparkles className="w-4 h-4" />
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <div className="absolute bottom-0 right-0 p-2 w-fit flex flex-row justify-end">
@@ -317,9 +340,6 @@ export const MultimodalInput = memo(
     if (prevProps.input !== nextProps.input) return false;
     if (prevProps.status !== nextProps.status) return false;
     if (!equal(prevProps.attachments, nextProps.attachments)) return false;
-    if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType)
-      return false;
-
     return true;
   }
 );
@@ -334,7 +354,7 @@ function PureAttachmentsButton({
   return (
     <Button
       data-testid="attachments-button"
-      className="rounded-md rounded-bl-lg p-[7px] h-fit dark:border-zinc-700 hover:dark:bg-zinc-900 hover:bg-zinc-200"
+      className="rounded-md p-[7px] h-fit dark:border-zinc-700 hover:dark:bg-zinc-900 hover:bg-zinc-200"
       onClick={(event) => {
         event.preventDefault();
         fileInputRef.current?.click();
