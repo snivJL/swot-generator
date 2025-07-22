@@ -113,7 +113,7 @@ function PureMultimodalInput({
     handleSubmit(undefined, {
       experimental_attachments: attachments,
     });
-    setAttachments([]);
+    // setAttachments([]);
     setLocalStorageInput("");
     resetHeight();
     if (width && width > 768) {

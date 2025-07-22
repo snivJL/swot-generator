@@ -3,7 +3,7 @@
 import type { UIMessage } from "ai";
 import cx from "classnames";
 import { AnimatePresence, motion } from "framer-motion";
-import { memo, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import type { Vote } from "@/lib/db/schema";
 import { DocumentToolCall, DocumentToolResult } from "./document";
 import { PencilEditIcon, SparklesIcon } from "./icons";
@@ -19,6 +19,7 @@ import { MessageEditor } from "./message-editor";
 import { DocumentPreview } from "./document-preview";
 import { MessageReasoning } from "./message-reasoning";
 import type { UseChatHelpers } from "@ai-sdk/react";
+import { DownloadLink } from "./download-link";
 
 const PurePreviewMessage = ({
   chatId,
@@ -40,7 +41,7 @@ const PurePreviewMessage = ({
   requiresScrollPadding: boolean;
 }) => {
   const [mode, setMode] = useState<"view" | "edit">("view");
-
+  console.log("MESSAGE:", message);
   return (
     <AnimatePresence>
       <motion.div
@@ -212,12 +213,20 @@ const PurePreviewMessage = ({
                           isReadonly={isReadonly}
                         />
                       ) : toolName === "createSwot" ? (
-                        <a href={result.url}>{`Download ${result.title}`}</a>
-                      ) : toolName === "formatMemo" ? (
-                        <p>Formatting your output...</p>
+                        <DownloadLink
+                          url={result.url}
+                          title={result.title}
+                          type="swot"
+                          className="my-2"
+                        />
                       ) : toolName === "createMemo" ? (
-                        <a href={result.url}>{`Download ${result.title}`}</a>
-                      ) : (
+                        <DownloadLink
+                          url={result.url}
+                          title={result.title}
+                          type="memo"
+                          className="my-2"
+                        />
+                      ) : toolName === "formatMemo" ? null : (
                         <pre>{JSON.stringify(result, null, 2)}</pre>
                       )}
                     </div>
@@ -262,9 +271,9 @@ export const ThinkingMessage = () => {
   return (
     <motion.div
       data-testid="message-assistant-loading"
-      className="w-full mx-auto max-w-3xl px-4 group/message min-h-96"
+      className="w-full mx-auto max-w-3xl px-4 group/message"
       initial={{ y: 5, opacity: 0 }}
-      animate={{ y: 0, opacity: 1, transition: { delay: 1 } }}
+      animate={{ y: 0, opacity: 1, transition: { delay: 0.1 } }}
       data-role={role}
     >
       <div
@@ -275,13 +284,55 @@ export const ThinkingMessage = () => {
           }
         )}
       >
-        <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border">
-          <SparklesIcon size={14} />
+        {/* Minimal avatar */}
+        <div
+          className="size-8 flex items-center rounded-full justify-center shrink-0"
+          style={{ backgroundColor: "#171717" }}
+        >
+          <motion.div
+            className="w-1.5 h-1.5 rounded-full bg-white"
+            animate={{
+              scale: [1, 1.3, 1],
+              opacity: [0.7, 1, 0.7],
+            }}
+            transition={{
+              duration: 1.5,
+              repeat: Number.POSITIVE_INFINITY,
+              ease: "easeInOut",
+            }}
+          />
         </div>
 
-        <div className="flex flex-col gap-2 w-full">
-          <div className="flex flex-col gap-4 text-muted-foreground">
-            Hmm...
+        <div className="flex items-center gap-2 py-2">
+          <AnimatePresence mode="wait">
+            <motion.span
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="text-sm text-muted-foreground"
+            >
+              Thinking
+            </motion.span>
+          </AnimatePresence>
+
+          <div className="flex gap-1">
+            {[...Array(3)].map((_, i) => (
+              <motion.div
+                key={i}
+                className="w-1 h-1 rounded-full"
+                style={{ backgroundColor: "#171717" }}
+                animate={{
+                  opacity: [0.3, 1, 0.3],
+                }}
+                transition={{
+                  duration: 1.2,
+                  delay: i * 0.2,
+                  repeat: Number.POSITIVE_INFINITY,
+                  ease: "easeInOut",
+                }}
+              />
+            ))}
           </div>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { tool } from "ai";
+import { DataStreamWriter, tool } from "ai";
 import { z } from "zod";
 import {
   Document,
@@ -12,8 +12,8 @@ import {
 import fs from "fs";
 import { join } from "path";
 import { put } from "@vercel/blob";
+import { generateUUID } from "@/lib/utils";
 
-// Helper to generate the DOCX and return a Buffer
 async function generateMemoDocx(
   title: string,
   sections: {
@@ -89,66 +89,88 @@ async function generateMemoDocx(
   // Pack and return Buffer
   return Buffer.from(await Packer.toBuffer(doc));
 }
+interface CreateDocumentProps {
+  dataStream: DataStreamWriter;
+}
+export const createMemo = ({ dataStream }: CreateDocumentProps) =>
+  tool({
+    description:
+      "Use this tool when the user asks to export due diligence questions in a .docx file",
+    parameters: z.object({
+      title: z.string(),
+      businessModel: z
+        .array(z.string())
+        .length(4)
+        .describe("4 Questions related to Business Model"),
+      marketOpportunity: z
+        .array(z.string())
+        .length(4)
+        .describe("4 Questions related to Market Opportunity"),
+      financialHealth: z
+        .array(z.string())
+        .length(4)
+        .describe("4 Questions related to Financial Health"),
+      leadershipTeam: z
+        .array(z.string())
+        .length(4)
+        .describe("4 Questions related to Leadership Team"),
+      risksAndChallenges: z
+        .array(z.string())
+        .length(4)
+        .describe("4 Questions related to Risks & Challenges"),
+    }),
+    execute: async ({
+      title,
+      businessModel,
+      marketOpportunity,
+      financialHealth,
+      leadershipTeam,
+      risksAndChallenges,
+    }) => {
+      const id = generateUUID();
+      dataStream.writeData({
+        type: "id",
+        content: id,
+      });
 
-export const createMemo = tool({
-  description:
-    "Use this tool when the user asks to generate due diligence follow-up questions to get the desired output format",
-  parameters: z.object({
-    title: z.string(),
-    businessModel: z
-      .array(z.string())
-      .length(4)
-      .describe("4 Questions related to Business Model"),
-    marketOpportunity: z
-      .array(z.string())
-      .length(4)
-      .describe("4 Questions related to Market Opportunity"),
-    financialHealth: z
-      .array(z.string())
-      .length(4)
-      .describe("4 Questions related to Financial Health"),
-    leadershipTeam: z
-      .array(z.string())
-      .length(4)
-      .describe("4 Questions related to Leadership Team"),
-    risksAndChallenges: z
-      .array(z.string())
-      .length(4)
-      .describe("4 Questions related to Risks & Challenges"),
-  }),
-  execute: async ({
-    title,
-    businessModel,
-    marketOpportunity,
-    financialHealth,
-    leadershipTeam,
-    risksAndChallenges,
-  }) => {
-    // 1) Build an ordered list of sections
-    const sections = [
-      { heading: "A. Business Model", questions: businessModel },
-      { heading: "B. Market Opportunity", questions: marketOpportunity },
-      { heading: "C. Financial Health", questions: financialHealth },
-      { heading: "D. Leadership Team", questions: leadershipTeam },
-      { heading: "E. Risks & Challenges", questions: risksAndChallenges },
-    ];
+      dataStream.writeData({
+        type: "title",
+        content: title,
+      });
 
-    // 2) Generate docx buffer
-    const buffer = await generateMemoDocx(title, sections);
+      dataStream.writeData({
+        type: "clear",
+        content: "",
+      });
+      // 1) Build an ordered list of sections
+      const sections = [
+        { heading: "A. Business Model", questions: businessModel },
+        { heading: "B. Market Opportunity", questions: marketOpportunity },
+        { heading: "C. Financial Health", questions: financialHealth },
+        { heading: "D. Leadership Team", questions: leadershipTeam },
+        { heading: "E. Risks & Challenges", questions: risksAndChallenges },
+      ];
 
-    // 3) Write to temp file
-    const filename = `due-diligence-questions-${Date.now()}.docx`;
-    const outPath = join("/tmp", filename);
-    fs.writeFileSync(outPath, buffer);
+      // 2) Generate docx buffer
+      const buffer = await generateMemoDocx(title, sections);
 
-    // 4) Upload to Vercel Blob
-    const blob = await put(filename, buffer, {
-      access: "public",
-      contentType:
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    });
+      // 3) Write to temp file
+      const filename = `due-diligence-questions-${Date.now()}.docx`;
+      const outPath = join("/tmp", filename);
+      fs.writeFileSync(outPath, buffer);
 
-    // 5) Return the URL
-    return blob.url;
-  },
-});
+      // 4) Upload to Vercel Blob
+      const blob = await put(filename, buffer, {
+        access: "public",
+        contentType:
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+      dataStream.writeData({ type: "finish", content: "" });
+
+      return {
+        id,
+        title,
+        url: blob.url,
+      };
+    },
+  });

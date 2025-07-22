@@ -14,7 +14,7 @@ interface CreateDocumentProps {
 export const createSwot = ({ dataStream }: CreateDocumentProps) =>
   tool({
     description:
-      "Use this tool only when the user has confirmed he wants to export the SWOT you generated",
+      "Use this tool only when the user has confirmed he wants to export the SWOT you generated. The tool result will appear in a component, no need to explicit the link",
     parameters: z.object({
       title: z.string(),
       strengths: z
