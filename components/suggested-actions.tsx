@@ -11,6 +11,7 @@ import equal from "fast-deep-equal";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "./ui/drawer";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
 import { BarChart3, Search, Sparkles, TrendingUp, Shield } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface SuggestedAction {
   question: string;
@@ -187,7 +188,7 @@ function PureSuggestedActions({
     },
   };
 
-  const renderContent = () => (
+  const renderContent = ({ mode }: { mode?: "initial" | "drawer" }) => (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4 mb-6">
@@ -205,14 +206,20 @@ function PureSuggestedActions({
 
         <AnimatePresence mode="wait">
           {actionCategories.map((category) => (
-            <TabsContent key={category.id} value={category.id} className="mt-0">
+            <TabsContent
+              key={category.id}
+              value={category.id}
+              className="mt-0 mx-6"
+            >
               {activeTab === category.id && (
                 <motion.div
                   variants={containerVariants}
                   initial="hidden"
                   animate="visible"
                   exit="hidden"
-                  className="grid gap-3"
+                  className={cn("grid gap-3", {
+                    "lg:grid-cols-2": mode === "drawer",
+                  })}
                 >
                   {category.actions.map((suggestedAction, actionIndex) => (
                     <motion.div
@@ -266,7 +273,9 @@ function PureSuggestedActions({
               Suggested Actions
             </DrawerTitle>
           </DrawerHeader>
-          <div className="px-4 pb-6 overflow-y-auto">{renderContent()}</div>
+          <div className="px-4 pb-6 overflow-y-auto">
+            {renderContent({ mode })}
+          </div>
         </DrawerContent>
       </Drawer>
     );
@@ -277,7 +286,7 @@ function PureSuggestedActions({
       data-testid="suggested-actions"
       className="w-full max-w-5xl mx-auto p-6"
     >
-      {renderContent()}
+      {renderContent({ mode })}
     </div>
   );
 }
