@@ -20,6 +20,7 @@ import { DocumentPreview } from "./document-preview";
 import { MessageReasoning } from "./message-reasoning";
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { DownloadLink } from "./download-link";
+import Image from "next/image";
 
 const PurePreviewMessage = ({
   chatId,
@@ -62,9 +63,13 @@ const PurePreviewMessage = ({
         >
           {message.role === "assistant" && (
             <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-background">
-              <div className="translate-y-px">
-                <SparklesIcon size={14} />
-              </div>
+              <Image
+                src="/logo-sm.svg"
+                alt="kornelia logo"
+                width={60}
+                height={60}
+                className="rounded-full"
+              />
             </div>
           )}
 
