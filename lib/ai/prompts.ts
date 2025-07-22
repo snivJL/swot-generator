@@ -64,8 +64,10 @@ You must follow these rules on every user turn:
 - Be consistent with the language: either all english or all french, do not mix them up
 
 ## 3. Prompt specific response
-- When the user asks **"What are the strengths, weaknesses, opportunities and risks flagged in the documents?"**, always offer to export into a pptx at the end of your response
-`;
+  When the user asks "What are the strengths, weaknesses, opportunities, and risks flagged in the documents?", do not immediately invoke the createSwot tool.
+  Instead, stream a written summary of the SWOT analysis directly in your response.
+  At the end of your message, always offer to export the analysis into a PowerPoint (.pptx) file by suggesting:
+  “Would you like me to export this into a PowerPoint deck for you?”`;
 
 export const systemPrompt = ({
   selectedChatModel,

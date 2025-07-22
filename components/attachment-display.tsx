@@ -110,7 +110,7 @@ export function AttachmentDisplay({
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <div className="text-center">
+                  <div className="text-center bg-white">
                     <div className="font-medium">{attachment.name}</div>
                     <div className="text-xs text-muted-foreground">
                       {getFileTypeLabel(attachment.contentType)}
@@ -128,7 +128,7 @@ export function AttachmentDisplay({
                   </Badge>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <div className="space-y-1">
+                  <div className="space-y-1 bg-white">
                     {attachments.slice(2).map((attachment, index) => (
                       <div key={index} className="text-sm">
                         {attachment.name}
@@ -152,7 +152,9 @@ export function AttachmentDisplay({
               <X className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Clear all attachments</TooltipContent>
+          <TooltipContent className="bg-white">
+            Clear all attachments
+          </TooltipContent>
         </Tooltip>
       </div>
     </TooltipProvider>

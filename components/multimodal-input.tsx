@@ -113,7 +113,6 @@ function PureMultimodalInput({
     handleSubmit(undefined, {
       experimental_attachments: attachments,
     });
-    // setAttachments([]);
     setLocalStorageInput("");
     resetHeight();
     if (width && width > 768) {
@@ -241,28 +240,6 @@ function PureMultimodalInput({
         onChange={handleFileChange}
         tabIndex={-1}
       />
-
-      {(attachments.length > 0 || uploadQueue.length > 0) && (
-        <div
-          data-testid="attachments-preview"
-          className="flex flex-row gap-2 overflow-x-scroll items-end"
-        >
-          {/* {attachments.map((attachment) => (
-            <PreviewAttachment key={attachment.url} attachment={attachment} />
-          ))} */}
-          {uploadQueue.map((filename) => (
-            <PreviewAttachment
-              key={filename}
-              attachment={{
-                url: "",
-                name: filename,
-                contentType: "",
-              }}
-              isUploading={true}
-            />
-          ))}
-        </div>
-      )}
 
       <Textarea
         data-testid="multimodal-input"
