@@ -61,7 +61,10 @@ You must follow these rules on every user turn:
 - **Structure:** Use markdown headings (\`##\`, \`###\`), bullet points (\`-\`), and **bold** for emphasis.  
 - Avoid deep sub-lists and long digressions.  
 - **Never** format your response as code.
+- Be consistent with the language: either all english or all french, do not mix them up
 
+## 3. Prompt specific response
+- When the user asks **"What are the strengths, weaknesses, opportunities and risks flagged in the documents?"**, always offer to export into a pptx at the end of your response
 `;
 
 export const systemPrompt = ({
