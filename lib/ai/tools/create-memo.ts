@@ -92,6 +92,12 @@ async function generateMemoDocx(
 interface CreateDocumentProps {
   dataStream: DataStreamWriter;
 }
+
+const companyQuestions = [
+  "What are the primary sources of revenue, and how stable and diversified are they?",
+  "What differentiates your company from competitors, and how sustainable is this advantage?",
+  "What are the biggest operational or strategic risks the company faces, and how are they being mitigated?",
+];
 export const createMemo = ({ dataStream }: CreateDocumentProps) =>
   tool({
     description:
@@ -100,24 +106,24 @@ export const createMemo = ({ dataStream }: CreateDocumentProps) =>
       title: z.string(),
       businessModel: z
         .array(z.string())
-        .length(4)
-        .describe("4 Questions related to Business Model"),
+        .length(3)
+        .describe("3 Questions related to Business Model"),
       marketOpportunity: z
         .array(z.string())
-        .length(4)
-        .describe("4 Questions related to Market Opportunity"),
+        .length(3)
+        .describe("3 Questions related to Market Opportunity"),
       financialHealth: z
         .array(z.string())
-        .length(4)
-        .describe("4 Questions related to Financial Health"),
+        .length(3)
+        .describe("3 Questions related to Financial Health"),
       leadershipTeam: z
         .array(z.string())
-        .length(4)
-        .describe("4 Questions related to Leadership Team"),
+        .length(3)
+        .describe("3 Questions related to Leadership Team"),
       risksAndChallenges: z
         .array(z.string())
-        .length(4)
-        .describe("4 Questions related to Risks & Challenges"),
+        .length(3)
+        .describe("3 Questions related to Risks & Challenges"),
     }),
     execute: async ({
       title,
@@ -149,6 +155,63 @@ export const createMemo = ({ dataStream }: CreateDocumentProps) =>
         { heading: "C. Financial Health", questions: financialHealth },
         { heading: "D. Leadership Team", questions: leadershipTeam },
         { heading: "E. Risks & Challenges", questions: risksAndChallenges },
+      ];
+
+      // 2) Generate docx buffer
+      const buffer = await generateMemoDocx(title, sections);
+
+      // 3) Write to temp file
+      const filename = `due-diligence-questions-${Date.now()}.docx`;
+      const outPath = join("/tmp", filename);
+      fs.writeFileSync(outPath, buffer);
+
+      // 4) Upload to Vercel Blob
+      const blob = await put(filename, buffer, {
+        access: "public",
+        contentType:
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+      dataStream.writeData({ type: "finish", content: "" });
+
+      return {
+        id,
+        title,
+        url: blob.url,
+      };
+    },
+  });
+
+export const createMemoV2 = ({ dataStream }: CreateDocumentProps) =>
+  tool({
+    description:
+      "Use this tool when the user asks to export due diligence questions",
+    parameters: z.object({
+      title: z.string(),
+      questions: z
+        .array(z.string())
+        .length(3)
+        .describe("3 Questions related to the company"),
+    }),
+    execute: async ({ title, questions }) => {
+      const id = generateUUID();
+      dataStream.writeData({
+        type: "id",
+        content: id,
+      });
+
+      dataStream.writeData({
+        type: "title",
+        content: title,
+      });
+
+      dataStream.writeData({
+        type: "clear",
+        content: "",
+      });
+      // 1) Build an ordered list of sections
+      const sections = [
+        { heading: "A.Company Questions", questions: companyQuestions },
+        { heading: "B.Generated Questions", questions },
       ];
 
       // 2) Generate docx buffer

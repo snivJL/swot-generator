@@ -2,12 +2,11 @@
 
 import type { Attachment, UIMessage } from "ai";
 import { useChat } from "@ai-sdk/react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { ChatHeader } from "@/components/chat-header";
 import type { Vote } from "@/lib/db/schema";
 import { fetcher, fetchWithErrorHandlers, generateUUID } from "@/lib/utils";
-import { Artifact } from "./artifact";
 import { MultimodalInput } from "./multimodal-input";
 import { Messages } from "./messages";
 import type { VisibilityType } from "./visibility-selector";
@@ -39,6 +38,7 @@ export function Chat({
   autoResume: boolean;
 }) {
   const { mutate } = useSWRConfig();
+  const [toolCall, setToolCall] = useState<string>();
 
   const { visibilityType } = useChatVisibility({
     chatId: id,
@@ -72,6 +72,9 @@ export function Chat({
     }),
     onFinish: () => {
       mutate(unstable_serialize(getChatHistoryPaginationKey));
+    },
+    onToolCall({ toolCall }) {
+      setToolCall(toolCall.toolName);
     },
     onError: (error) => {
       if (error instanceof ChatSDKError) {
@@ -116,6 +119,22 @@ export function Chat({
     setMessages,
   });
 
+  const currentToolCall = useMemo(() => {
+    const tools = messages
+      .at(-1)
+      ?.parts.filter((part) => part.type === "tool-invocation");
+
+    if (
+      tools &&
+      tools[0]?.toolInvocation &&
+      toolCall === tools[0]?.toolInvocation.toolName
+    ) {
+      return tools[0].toolInvocation.toolName;
+    } else {
+      return undefined;
+    }
+  }, [toolCall, messages]);
+
   return (
     <>
       <div className="flex flex-col min-w-0 h-dvh bg-background">
@@ -159,7 +178,7 @@ export function Chat({
         </form>
       </div>
 
-      <Artifact
+      {/* <Artifact
         chatId={id}
         input={input}
         setInput={setInput}
@@ -174,7 +193,7 @@ export function Chat({
         reload={reload}
         votes={votes}
         isReadonly={isReadonly}
-      />
+      /> */}
     </>
   );
 }

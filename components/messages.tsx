@@ -1,22 +1,24 @@
-import type { UIMessage } from 'ai';
-import { PreviewMessage, ThinkingMessage } from './message';
-import { Greeting } from './greeting';
-import { memo } from 'react';
-import type { Vote } from '@/lib/db/schema';
-import equal from 'fast-deep-equal';
-import type { UseChatHelpers } from '@ai-sdk/react';
-import { motion } from 'framer-motion';
-import { useMessages } from '@/hooks/use-messages';
+import type { UIMessage } from "ai";
+import { PreviewMessage } from "./message";
+import { Greeting } from "./greeting";
+import { memo } from "react";
+import type { Vote } from "@/lib/db/schema";
+import equal from "fast-deep-equal";
+import type { UseChatHelpers } from "@ai-sdk/react";
+import { motion } from "framer-motion";
+import { useMessages } from "@/hooks/use-messages";
+import { ThinkingMessage } from "./thinking-message";
 
 interface MessagesProps {
   chatId: string;
-  status: UseChatHelpers['status'];
+  status: UseChatHelpers["status"];
   votes: Array<Vote> | undefined;
   messages: Array<UIMessage>;
-  setMessages: UseChatHelpers['setMessages'];
-  reload: UseChatHelpers['reload'];
+  setMessages: UseChatHelpers["setMessages"];
+  reload: UseChatHelpers["reload"];
   isReadonly: boolean;
   isArtifactVisible: boolean;
+  currentToolCall?: string;
 }
 
 function PureMessages({
@@ -27,6 +29,7 @@ function PureMessages({
   setMessages,
   reload,
   isReadonly,
+  currentToolCall,
 }: MessagesProps) {
   const {
     containerRef: messagesContainerRef,
@@ -51,7 +54,7 @@ function PureMessages({
           key={message.id}
           chatId={chatId}
           message={message}
-          isLoading={status === 'streaming' && messages.length - 1 === index}
+          isLoading={status === "streaming" && messages.length - 1 === index}
           vote={
             votes
               ? votes.find((vote) => vote.messageId === message.id)
@@ -66,9 +69,11 @@ function PureMessages({
         />
       ))}
 
-      {status === 'submitted' &&
+      {status === "submitted" &&
         messages.length > 0 &&
-        messages[messages.length - 1].role === 'user' && <ThinkingMessage />}
+        messages[messages.length - 1].role === "user" && (
+          <ThinkingMessage currentToolCall={currentToolCall} />
+        )}
 
       <motion.div
         ref={messagesEndRef}

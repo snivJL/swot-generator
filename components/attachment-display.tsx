@@ -61,10 +61,6 @@ export function AttachmentDisplay({
     );
   };
 
-  const clearAllAttachments = () => {
-    setAttachments([]);
-  };
-
   return (
     <TooltipProvider>
       <div
@@ -140,22 +136,6 @@ export function AttachmentDisplay({
             )}
           </div>
         </div>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
-              onClick={clearAllAttachments}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent className="bg-white">
-            Clear all attachments
-          </TooltipContent>
-        </Tooltip>
       </div>
     </TooltipProvider>
   );

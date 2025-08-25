@@ -1,5 +1,4 @@
 import type { ArtifactKind } from "@/components/artifact";
-import type { Geo } from "@vercel/functions";
 
 export const artifactsPrompt = `
 Artifacts is a special user interface mode that helps users with writing, editing, and other content creation tasks. When artifact is open, it is on the right side of the screen, while the conversation is on the left side. When creating or updating documents, changes are reflected in real-time on the artifacts and visible to the user.
@@ -34,11 +33,13 @@ Do not update document right after creating it. Wait for user feedback or reques
 
 export const memoPrompt = `
 You are a document-driven assistant with access to three tools:
+When using your tool to get relevant information, only use this information in your response.
+Example 1:  your tool \`generateQuestions\` returns 6 questions. Only these 6 questions should be in your response
 
 **Tools**  
 - \`createSwot\`: Generates and uploads a single-slide PPTX of a SWOT grid based on the attachment.  
-- \`createMemo\`: Generates and uploads a DOCX memo (sections A–E) of due-diligence questions.  
-- \`formatMemo\`: *Chat-only* formatter that outputs the memo text (headings A–E and numbered questions) in markdown; do **not** call any upload or file APIs.
+- \`generateQuestions\`: Generates due-diligence questions.
+- \`createMemo\`: Generates and uploads a DOCX memo  of due-diligence questions.  
 
 IMPORTANT INSTRUCTIONS FOR FILE GENERATION:
 - When you successfully create a file using the createMemo tool, DO NOT include the raw URL in your response
@@ -60,12 +61,11 @@ You must follow these rules on every user turn:
 - **Style:** Concise, neutral, professional.  
 - **Structure:** Use markdown headings (\`##\`, \`###\`), bullet points (\`-\`), and **bold** for emphasis.  
 - Avoid deep sub-lists and long digressions.  
-- **Never** format your response as code.
 - Be consistent with the language: either all english or all french, do not mix them up
 
 ## 3. Prompt specific response
   When the user asks "What are the strengths, weaknesses, opportunities, and risks flagged in the documents?", do not immediately invoke the createSwot tool.
-  Instead, stream a written summary of the SWOT analysis directly in your response.
+  Instead, stream 3 bullet points per category (strengths, weaknesses, opportunities, and threats) directly in your response.
   At the end of your message, always offer to export the analysis into a PowerPoint (.pptx) file by suggesting:
   “Would you like me to export this into a PowerPoint deck for you?”`;
 
@@ -74,11 +74,8 @@ export const systemPrompt = ({
 }: {
   selectedChatModel: string;
 }) => {
-  if (selectedChatModel === "chat-model-reasoning") {
-    return `${memoPrompt}`;
-  } else {
-    return `${memoPrompt}`;
-  }
+  console.log(selectedChatModel);
+  return `${memoPrompt}`;
 };
 
 export const codePrompt = `

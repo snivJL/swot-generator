@@ -33,7 +33,8 @@ import { differenceInSeconds } from "date-fns";
 import { ChatSDKError } from "@/lib/errors";
 import { createSwot } from "@/lib/ai/tools/create-swot";
 import { formatMemo } from "@/lib/ai/tools/format-memo";
-import { createMemo } from "@/lib/ai/tools/create-memo";
+import { createMemo, createMemoV2 } from "@/lib/ai/tools/create-memo";
+import { generateQuestions } from "@/lib/ai/tools/generate-questions";
 
 export const maxDuration = 60;
 
@@ -136,58 +137,56 @@ export async function POST(request: Request) {
           system: systemPrompt({ selectedChatModel }),
           messages,
           maxSteps: 5,
-          experimental_activeTools:
-            selectedChatModel === "chat-model-reasoning"
-              ? ["createSwot", "formatMemo", "createMemo"]
-              : ["createSwot", "formatMemo", "createMemo"],
+          experimental_activeTools: ["createSwot", "generateQuestions"],
           experimental_transform: smoothStream({ chunking: "word" }),
           experimental_generateMessageId: generateUUID,
           tools: {
             createSwot: createSwot({ dataStream }),
-            formatMemo,
-            createMemo: createMemo({ dataStream }),
+            // formatMemo,
+            // createMemo: createMemoV2({ dataStream }),
+            generateQuestions: generateQuestions({ dataStream }),
           },
           onStepFinish({ text, toolCalls, toolResults, finishReason, usage }) {
-            // console.groupCollapsed(
-            //   "%c✨ Step Finished",
-            //   "color: #0A6AE7; font-weight: bold; font-size: 12px;"
-            // );
-            // console.log("%cText:", "font-weight: bold;", text);
-            // if (Array.isArray(toolCalls) && toolCalls.length) {
-            //   console.groupCollapsed("🔧 Tool Calls");
-            //   toolCalls.forEach((call, i) => {
-            //     console.groupCollapsed(`Call ${i} – ${call.toolName}`);
-            //     console.log("%cType:", "font-weight:bold;", call.type);
-            //     console.log(
-            //       "%ctoolCallId:",
-            //       "font-weight:bold;",
-            //       call.toolCallId
-            //     );
-            //     console.log("Args (JSON):", JSON.stringify(call.args, null, 2));
-            //     console.groupEnd();
-            //   });
-            //   console.groupEnd();
-            // } else {
-            //   console.log("%cTool Calls:", "font-weight: bold;", toolCalls);
-            // }
-            // if (Array.isArray(toolResults) && toolResults.length) {
-            //   console.groupCollapsed("📥 Tool Results");
-            //   toolResults.forEach((res, i) => {
-            //     console.groupCollapsed(`Result ${i} – ${res.toolName}`);
-            //     console.log("%cType:", "font-weight:bold;", res.type);
-            //     console.log(
-            //       "%ctoolCallId:",
-            //       "font-weight:bold;",
-            //       res.toolCallId
-            //     );
-            //     console.log("%cArgs:", "font-weight:bold;", res.args);
-            //     console.dir(res.result, { depth: null });
-            //     console.groupEnd();
-            //   });
-            // }
-            // console.log("%cFinish Reason:", "font-weight: bold;", finishReason);
-            // console.log("%cUsage:", "font-weight: bold;", usage);
-            // console.groupEnd();
+            console.groupCollapsed(
+              "%c✨ Step Finished",
+              "color: #0A6AE7; font-weight: bold; font-size: 12px;"
+            );
+            console.log("%cText:", "font-weight: bold;", text);
+            if (Array.isArray(toolCalls) && toolCalls.length) {
+              console.groupCollapsed("🔧 Tool Calls");
+              toolCalls.forEach((call, i) => {
+                console.groupCollapsed(`Call ${i} – ${call.toolName}`);
+                console.log("%cType:", "font-weight:bold;", call.type);
+                console.log(
+                  "%ctoolCallId:",
+                  "font-weight:bold;",
+                  call.toolCallId
+                );
+                console.log("Args (JSON):", JSON.stringify(call.args, null, 2));
+                console.groupEnd();
+              });
+              console.groupEnd();
+            } else {
+              console.log("%cTool Calls:", "font-weight: bold;", toolCalls);
+            }
+            if (Array.isArray(toolResults) && toolResults.length) {
+              console.groupCollapsed("📥 Tool Results");
+              toolResults.forEach((res, i) => {
+                console.groupCollapsed(`Result ${i} – ${res.toolName}`);
+                console.log("%cType:", "font-weight:bold;", res.type);
+                console.log(
+                  "%ctoolCallId:",
+                  "font-weight:bold;",
+                  res.toolCallId
+                );
+                console.log("%cArgs:", "font-weight:bold;", res.args);
+                console.dir(res.result, { depth: null });
+                console.groupEnd();
+              });
+            }
+            console.log("%cFinish Reason:", "font-weight: bold;", finishReason);
+            console.log("%cUsage:", "font-weight: bold;", usage);
+            console.groupEnd();
           },
           onFinish: async ({ response }) => {
             if (session.user?.id) {
