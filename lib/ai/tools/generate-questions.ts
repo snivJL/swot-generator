@@ -1,103 +1,33 @@
 import { DataStreamWriter, tool } from "ai";
 import { z } from "zod";
-import {
-  Document,
-  Packer,
-  Paragraph,
-  HeadingLevel,
-  Header,
-  TextRun,
-  ImageRun,
-} from "docx";
-import fs from "fs";
-import { join } from "path";
-import { put } from "@vercel/blob";
 import { generateUUID } from "@/lib/utils";
 
-async function generateMemoDocx(
-  title: string,
-  sections: {
-    heading: string;
-    questions: string[];
-  }[]
-): Promise<Buffer> {
-  const logoPath = join(process.cwd(), "public", "logo.png");
-  const logoBuffer = fs.readFileSync(logoPath);
-
-  const doc = new Document({
-    title,
-    numbering: {
-      config: [
-        {
-          reference: "questions",
-          levels: [
-            {
-              level: 0,
-              format: "decimal",
-              text: "%1.",
-              alignment: "left",
-            },
-          ],
-        },
-      ],
-    },
-    sections: [
-      {
-        headers: {
-          default: new Header({
-            children: [
-              new Paragraph({
-                children: [
-                  new TextRun(""),
-                  new ImageRun({
-                    data: logoBuffer,
-                    transformation: { width: 100, height: 48 },
-                    type: "png",
-                  }),
-                ],
-                // push image to the right
-                alignment: "right",
-              }),
-            ],
-          }),
-        },
-        properties: {},
-        children: sections.flatMap(({ heading, questions }) => {
-          // Section title
-          const headingPara = new Paragraph({
-            text: heading,
-            heading: HeadingLevel.HEADING_2,
-            spacing: { after: 200 },
-          });
-          // Numbered questions
-          const listParas = questions.map(
-            (q) =>
-              new Paragraph({
-                text: q,
-                numbering: { reference: "questions", level: 0 },
-                spacing: { after: 100 },
-              })
-          );
-          // add a bit of space before next section
-          const spacer = new Paragraph({ text: "" });
-          return [headingPara, ...listParas, spacer];
-        }),
-      },
-    ],
-  });
-
-  // Pack and return Buffer
-  return Buffer.from(await Packer.toBuffer(doc));
-}
 interface CreateDocumentProps {
   dataStream: DataStreamWriter;
 }
 
-const questionsFromTemplate = [
-  "What are the primary sources of revenue, and how stable and diversified are they?",
-  "What differentiates your company from competitors, and how sustainable is this advantage?",
-  "What are the biggest operational or strategic risks the company faces, and how are they being mitigated?",
-];
+export const questionsFromTemplate = {
+  financialAndUnitEconomics: [
+    "What are the primary revenue streams, and how concentrated are revenues by customer, product, and geography?",
+    "What drives gross margin and unit economics, and how sensitive are they to pricing or input-cost changes?",
+    "What is the cash conversion cycle and working-capital requirement, and what capex is needed to sustain growth?",
+  ],
+  marketCustomersAndGrowth: [
+    "What is the realistic TAM/SAM/SOM and the company’s current share and growth rate?",
+    "How are customers acquired and retained—what are CAC, payback period, LTV, and churn/retention?",
+    "What does the next 12–24 months of pipeline and expansion (products/geographies/segments) look like, and how accurate are forecasts?",
+  ],
+  operationsTechnologyAndPeople: [
+    "What are the critical operational processes and capacity constraints, and how will they scale with demand?",
+    "What single points of failure exist in the supply chain, vendors, or infrastructure, and what are the continuity plans?",
+    "What is the current tech stack and IP ownership status, and how are security, data protection, and key-person risks managed?",
+  ],
+  legalComplianceAndGovernance: [
+    "Which material contracts and obligations (customers, suppliers, leases, debt) could be impacted by a change of control?",
+    "What regulatory and licensing requirements apply, and what is the current compliance posture (e.g., data privacy, industry standards)?",
+    "What pending or historical litigation, claims, or contingent liabilities exist, and how is governance structured at the board and management levels?",
+  ],
+} as const;
 
 export const generateQuestions = ({ dataStream }: CreateDocumentProps) =>
   tool({
@@ -105,14 +35,19 @@ export const generateQuestions = ({ dataStream }: CreateDocumentProps) =>
       "Use this tool when the user asks for some due diligence questions. Only use the 6 questions in output for your response.",
     parameters: z.object({
       title: z.string(),
-
+      category: z.enum([
+        "financialAndUnitEconomics",
+        "marketCustomersAndGrowth",
+        "operationsTechnologyAndPeople",
+        "legalComplianceAndGovernance",
+      ]),
       generatedQuestions: z
         .array(z.string())
         .length(3)
         .describe("3 Questions related to the company"),
     }),
 
-    execute: async ({ title, generatedQuestions }) => {
+    execute: async ({ title, category, generatedQuestions }) => {
       const id = generateUUID();
       dataStream.writeData({
         type: "id",
@@ -129,7 +64,7 @@ export const generateQuestions = ({ dataStream }: CreateDocumentProps) =>
         content: "",
       });
       return {
-        questionsFromTemplate,
+        questionsFromTemplate: questionsFromTemplate[category],
         generatedQuestions,
       };
     },

@@ -62,7 +62,7 @@ function getStreamContext() {
 
 export async function POST(request: Request) {
   let requestBody: PostRequestBody;
-
+  console.log("Api Called");
   try {
     const json = await request.json();
     requestBody = postRequestBodySchema.parse(json);
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
   try {
     const { id, message, selectedChatModel, selectedVisibilityType } =
       requestBody;
-
+    console.log("Checking auth");
     const session = await auth();
 
     if (!session?.user) {
@@ -80,15 +80,15 @@ export async function POST(request: Request) {
     }
 
     const userType: UserType = session.user.type;
-
+    console.log("Getting message Count");
     const messageCount = await getMessageCountByUserId({
       id: session.user.id,
       differenceInHours: 24,
     });
 
-    if (messageCount > entitlementsByUserType[userType].maxMessagesPerDay) {
-      return new ChatSDKError("rate_limit:chat").toResponse();
-    }
+    // if (messageCount > entitlementsByUserType[userType].maxMessagesPerDay) {
+    //   return new ChatSDKError("rate_limit:chat").toResponse();
+    // }
 
     const chat = await getChatById({ id });
     if (!chat) {
@@ -106,6 +106,7 @@ export async function POST(request: Request) {
         return new ChatSDKError("forbidden:chat").toResponse();
       }
     }
+    console.log("Getting messages...");
     const previousMessages = await getMessagesByChatId({ id });
 
     const messages = appendClientMessage({
@@ -113,7 +114,7 @@ export async function POST(request: Request) {
       messages: previousMessages,
       message,
     });
-
+    console.log("Saving messages...");
     await saveMessages({
       messages: [
         {
@@ -129,7 +130,7 @@ export async function POST(request: Request) {
 
     const streamId = generateUUID();
     await createStreamId({ streamId, chatId: id });
-
+    console.log("Creating data stream...");
     const stream = createDataStream({
       execute: (dataStream) => {
         const result = streamText({
@@ -146,6 +147,7 @@ export async function POST(request: Request) {
             // createMemo: createMemoV2({ dataStream }),
             generateQuestions: generateQuestions({ dataStream }),
           },
+
           onStepFinish({ text, toolCalls, toolResults, finishReason, usage }) {
             console.groupCollapsed(
               "%c✨ Step Finished",

@@ -90,27 +90,33 @@ const actionCategories: ActionCategory[] = [
   },
   {
     id: "financial",
-    name: "Financial & DD",
+    name: "Due diligence",
     icon: Shield,
     color: "from-red-500 to-orange-500",
     actions: [
       {
-        question: "What debt or capital structure details are provided?",
-        action: "What debt or capital structure details are provided?",
-      },
-      {
-        question: "List any legal, regulatory, or compliance issues mentioned",
-        action: "List any legal, regulatory, or compliance issues mentioned.",
+        question:
+          "Write a list of Financial & Unit Economics due diligence questions",
+        action:
+          "Write a list of Financial & Unit Economics due diligence questions",
       },
       {
         question:
-          "Are there any notes about recent or upcoming capital expenditures?",
+          "Write a list of Market, Customers & Growth due diligence questions",
         action:
-          "Are there any notes about recent or upcoming capital expenditures?",
+          "Write a list of Market, Customers & Growth due diligence questions",
       },
       {
-        question: "Give me a list of due diligence follow up questions",
-        action: "Give me a list of due diligence follow up questions",
+        question:
+          "Write a list of Operations, Technology & People due diligence questions",
+        action:
+          "Write a list of Operations, Technology & People due diligence questions",
+      },
+      {
+        question:
+          "Write a list of Legal, Compliance & Governance due diligence questions",
+        action:
+          "Write a list of Legal, Compliance & Governance due diligence questions",
       },
     ],
   },
