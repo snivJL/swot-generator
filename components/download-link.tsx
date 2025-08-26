@@ -10,7 +10,7 @@ interface DownloadLinkProps {
   type: 'memo' | 'swot';
   className?: string;
 }
-const MotionCard = motion(Card);
+const MotionCard = motion.create(Card);
 
 const cardVariants = {
   hidden: { opacity: 0, y: 10 },

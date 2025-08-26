@@ -34,7 +34,7 @@ function PureChatHeader({
 }) {
   const router = useRouter();
   const { open } = useSidebar();
-  console.log(attachments);
+
   const { width: windowWidth } = useWindowSize();
 
   return (

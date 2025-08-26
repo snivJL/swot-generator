@@ -83,10 +83,6 @@ export async function POST(request: Request) {
       differenceInHours: 24,
     });
 
-    // if (messageCount > entitlementsByUserType[userType].maxMessagesPerDay) {
-    //   return new ChatSDKError("rate_limit:chat").toResponse();
-    // }
-
     const chat = await getChatById({ id });
     if (!chat) {
       const title = await generateTitleFromUserMessage({
@@ -128,20 +124,33 @@ export async function POST(request: Request) {
     const streamId = generateUUID();
     await createStreamId({ streamId, chatId: id });
     console.log('Creating data stream...');
+
     const stream = createDataStream({
       execute: (dataStream) => {
+        // Send initial thinking state
+        const hasAttachedDocument = messages.some(
+          (message) =>
+            message.role === 'assistant' &&
+            message.experimental_attachments?.length,
+        );
+        dataStream.writeData({
+          type: 'thinking-start',
+          content: hasAttachedDocument
+            ? 'Scanning your document...'
+            : 'Analyzing your request...',
+        });
+
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
           system: systemPrompt({ selectedChatModel }),
           messages,
           maxSteps: 5,
+
           experimental_activeTools: ['createSwot', 'generateQuestions'],
           experimental_transform: smoothStream({ chunking: 'word' }),
           experimental_generateMessageId: generateUUID,
           tools: {
             createSwot: createSwot({ dataStream }),
-            // formatMemo,
-            // createMemo: createMemoV2({ dataStream }),
             generateQuestions: generateQuestions({ dataStream }),
           },
 
@@ -151,6 +160,8 @@ export async function POST(request: Request) {
               'color: #0A6AE7; font-weight: bold; font-size: 12px;',
             );
             console.log('%cText:', 'font-weight: bold;', text);
+
+            // Send immediate feedback when tool calls are detected
             if (Array.isArray(toolCalls) && toolCalls.length) {
               console.groupCollapsed('🔧 Tool Calls');
               toolCalls.forEach((call, i) => {
@@ -162,12 +173,22 @@ export async function POST(request: Request) {
                   call.toolCallId,
                 );
                 console.log('Args (JSON):', JSON.stringify(call.args, null, 2));
+
+                // Send tool starting feedback when we detect the call
+                const toolFeedback = getToolFeedback(call.toolName);
+                dataStream.writeData({
+                  type: 'thinking-update',
+                  content: toolFeedback.starting,
+                  stepType: 'tool-call',
+                  toolName: call.toolName,
+                });
+
                 console.groupEnd();
               });
               console.groupEnd();
-            } else {
-              console.log('%cTool Calls:', 'font-weight: bold;', toolCalls);
             }
+
+            // Tool results feedback
             if (Array.isArray(toolResults) && toolResults.length) {
               console.groupCollapsed('📥 Tool Results');
               toolResults.forEach((res, i) => {
@@ -180,14 +201,56 @@ export async function POST(request: Request) {
                 );
                 console.log('%cArgs:', 'font-weight:bold;', res.args);
                 console.dir(res.result, { depth: null });
+
+                // Send completion feedback
+                const toolFeedback = getToolFeedback(res.toolName);
+                dataStream.writeData({
+                  type: 'thinking-update',
+                  content: toolFeedback.completed,
+                  stepType: 'tool-result',
+                  toolName: res.toolName,
+                });
+
                 console.groupEnd();
               });
+              console.groupEnd();
             }
-            console.log('%cFinish Reason:', 'font-weight: bold;', finishReason);
-            console.log('%cUsage:', 'font-weight: bold;', usage);
-            console.groupEnd();
+
+            if (finishReason === 'stop') {
+              dataStream.writeData({
+                type: 'thinking-update',
+                content: 'Finalizing response...',
+                stepType: 'completion',
+              });
+            } else if (finishReason === 'tool-calls') {
+              dataStream.writeData({
+                type: 'thinking-update',
+                content: 'Processing tool results...',
+                stepType: 'processing',
+              });
+            } else if (text?.trim()) {
+              dataStream.writeData({
+                type: 'thinking-update',
+                content: 'Generating response...',
+                stepType: 'generate',
+              });
+            }
           },
-          onFinish: async ({ response }) => {
+
+          // Enhanced reasoning support
+          experimental_providerMetadata: {
+            anthropic: {
+              cacheControl: { type: 'ephemeral' },
+            },
+          },
+
+          onFinish: async ({ response, usage, finishReason }) => {
+            // Send thinking complete
+            dataStream.writeData({
+              type: 'thinking-end',
+              content: 'Analysis complete',
+            });
+
             if (session.user?.id) {
               try {
                 const assistantId = getTrailingMessageId({
@@ -220,11 +283,26 @@ export async function POST(request: Request) {
                     },
                   ],
                 });
-              } catch (_) {
-                console.error('Failed to save chat');
+
+                // Send final completion data
+                dataStream.writeData({
+                  type: 'completion-meta',
+                  content: JSON.stringify({
+                    usage,
+                    finishReason,
+                    stepCount: response.messages.length,
+                  }),
+                });
+              } catch (error) {
+                console.error('Failed to save chat:', error);
+                dataStream.writeData({
+                  type: 'error',
+                  content: 'Failed to save conversation',
+                });
               }
             }
           },
+
           experimental_telemetry: {
             isEnabled: isProductionEnvironment,
             functionId: 'stream-text',
@@ -237,8 +315,9 @@ export async function POST(request: Request) {
           sendReasoning: true,
         });
       },
-      onError: () => {
-        return 'Oops, an error occurred!';
+      onError: (error) => {
+        console.error('Stream error:', error);
+        return 'Oops, an error occurred while processing your request!';
       },
     });
 
@@ -255,9 +334,39 @@ export async function POST(request: Request) {
     if (error instanceof ChatSDKError) {
       return error.toResponse();
     }
+    console.error('Unexpected error:', error);
+    return new ChatSDKError('offline:api').toResponse();
   }
 }
 
+// Helper function to provide contextual feedback for different tools
+function getToolFeedback(toolName: string) {
+  const feedbackMap: Record<
+    string,
+    { starting: string; executing: string; completed: string }
+  > = {
+    createSwot: {
+      starting: 'Preparing SWOT analysis...',
+      executing:
+        'Analyzing strengths, weaknesses, opportunities, and threats...',
+      completed: 'SWOT analysis complete',
+    },
+    generateQuestions: {
+      starting: 'Preparing due diligence questions...',
+      executing: 'Generating relevant questions for your analysis...',
+      completed: 'Questions generated successfully',
+    },
+    default: {
+      starting: 'Initializing tool...',
+      executing: 'Processing with tool...',
+      completed: 'Tool execution complete',
+    },
+  };
+
+  return feedbackMap[toolName] || feedbackMap.default;
+}
+
+// Keep existing GET and DELETE methods unchanged
 export async function GET(request: Request) {
   const streamContext = getStreamContext();
   const resumeRequestedAt = new Date();
@@ -316,10 +425,6 @@ export async function GET(request: Request) {
     () => emptyDataStream,
   );
 
-  /*
-   * For when the generation is streaming during SSR
-   * but the resumable stream has concluded at this point.
-   */
   if (!stream) {
     const messages = await getMessagesByChatId({ id: chatId });
     const mostRecentMessage = messages.at(-1);

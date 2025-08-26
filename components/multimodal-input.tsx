@@ -22,7 +22,7 @@ import { SuggestedActions } from './suggested-actions';
 import equal from 'fast-deep-equal';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowDown, Sparkles } from 'lucide-react';
+import { ArrowDown, Loader, Sparkles } from 'lucide-react';
 import { useScrollToBottom } from '@/hooks/use-scroll-to-bottom';
 
 function PureMultimodalInput({
@@ -55,6 +55,7 @@ function PureMultimodalInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { width } = useWindowSize();
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -131,6 +132,7 @@ function PureMultimodalInput({
     formData.append('file', file);
 
     try {
+      setIsUploading(true);
       const response = await fetch('/api/files/upload', {
         method: 'POST',
         body: formData,
@@ -150,6 +152,8 @@ function PureMultimodalInput({
       toast.error(error);
     } catch (error) {
       toast.error('Failed to upload file, please try again!');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -270,7 +274,11 @@ function PureMultimodalInput({
       />
 
       <div className="absolute bottom-0 left-0 p-2 w-fit flex flex-row items-center gap-2">
-        <AttachmentsButton fileInputRef={fileInputRef} status={status} />
+        <AttachmentsButton
+          isUploading={isUploading}
+          fileInputRef={fileInputRef}
+          status={status}
+        />
 
         {/* Prompt Library Button - only show when there are messages */}
         <AnimatePresence>
@@ -321,9 +329,11 @@ export const MultimodalInput = memo(
 );
 
 function PureAttachmentsButton({
+  isUploading,
   fileInputRef,
   status,
 }: {
+  isUploading: boolean;
   fileInputRef: React.MutableRefObject<HTMLInputElement | null>;
   status: UseChatHelpers['status'];
 }) {
@@ -335,10 +345,14 @@ function PureAttachmentsButton({
         event.preventDefault();
         fileInputRef.current?.click();
       }}
-      disabled={status !== 'ready'}
+      disabled={status !== 'ready' || isUploading}
       variant="ghost"
     >
-      <PaperclipIcon size={14} />
+      {isUploading ? (
+        <Loader size={14} className="animate-spin" />
+      ) : (
+        <PaperclipIcon size={14} />
+      )}
     </Button>
   );
 }

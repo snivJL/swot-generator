@@ -13,7 +13,7 @@ export const questionsFromTemplate = {
     'What is the cash conversion cycle and working-capital requirement, and what capex is needed to sustain growth?',
   ],
   marketCustomersAndGrowth: [
-    'What is the realistic TAM/SAM/SOM and the company’s current share and growth rate?',
+    "What is the realistic TAM/SAM/SOM and the company's current share and growth rate?",
     'How are customers acquired and retained—what are CAC, payback period, LTV, and churn/retention?',
     'What does the next 12–24 months of pipeline and expansion (products/geographies/segments) look like, and how accurate are forecasts?',
   ],
@@ -49,9 +49,28 @@ export const generateQuestions = ({ dataStream }: CreateDocumentProps) =>
 
     execute: async ({ title, category, generatedQuestions }) => {
       const id = generateUUID();
+
+      // Send progressive updates during execution
+      dataStream.writeData({
+        type: 'tool-progress',
+        content: 'Setting up question framework...',
+        toolName: 'generateQuestions',
+        progress: 0,
+      });
+
       dataStream.writeData({
         type: 'id',
         content: id,
+      });
+
+      dataStream.writeData({
+        type: 'tool-progress',
+        content: `Analyzing ${category
+          .replace(/([A-Z])/g, ' $1')
+          .toLowerCase()
+          .trim()} category...`,
+        toolName: 'generateQuestions',
+        progress: 25,
       });
 
       dataStream.writeData({
@@ -60,12 +79,74 @@ export const generateQuestions = ({ dataStream }: CreateDocumentProps) =>
       });
 
       dataStream.writeData({
+        type: 'tool-progress',
+        content: 'Generating custom questions...',
+        toolName: 'generateQuestions',
+        progress: 50,
+      });
+
+      // Simulate some processing time to show progress
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      dataStream.writeData({
+        type: 'tool-progress',
+        content: 'Selecting template questions...',
+        toolName: 'generateQuestions',
+        progress: 75,
+      });
+
+      const templateQuestions = questionsFromTemplate[category];
+
+      // Stream each question as it's "generated" for better UX
+      generatedQuestions.forEach((question, index) => {
+        dataStream.writeData({
+          type: 'question-generated',
+          content: question,
+          questionIndex: index,
+          questionType: 'custom',
+        });
+      });
+
+      templateQuestions.forEach((question, index) => {
+        dataStream.writeData({
+          type: 'question-generated',
+          content: question,
+          questionIndex: index + generatedQuestions.length,
+          questionType: 'template',
+        });
+      });
+
+      dataStream.writeData({
+        type: 'tool-progress',
+        content: 'Questions ready!',
+        toolName: 'generateQuestions',
+        progress: 100,
+      });
+
+      dataStream.writeData({
         type: 'clear',
         content: '',
       });
+
+      // Additional metadata for the frontend
+      dataStream.writeData({
+        type: 'questions-meta',
+        content: JSON.stringify({
+          category,
+          customCount: generatedQuestions.length,
+          templateCount: templateQuestions.length,
+          totalCount: generatedQuestions.length + templateQuestions.length,
+        }),
+      });
+
       return {
-        questionsFromTemplate: questionsFromTemplate[category],
+        questionsFromTemplate: templateQuestions,
         generatedQuestions,
+        metadata: {
+          category,
+          totalQuestions: generatedQuestions.length + templateQuestions.length,
+          processingTime: Date.now(), // For potential analytics
+        },
       };
     },
   });

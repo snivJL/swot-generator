@@ -1,3 +1,5 @@
+'use client';
+
 import type { UIMessage } from 'ai';
 import { PreviewMessage } from './message';
 import { Greeting } from './greeting';
@@ -7,7 +9,20 @@ import equal from 'fast-deep-equal';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import { motion } from 'framer-motion';
 import { useMessages } from '@/hooks/use-messages';
-import { ThinkingMessage } from './thinking-message';
+
+export interface EnhancedThinkingInfo {
+  currentToolCall?: string;
+  message: string;
+  progress?: number;
+  stepType?: string;
+  isThinking: boolean;
+}
+
+interface GeneratedQuestion {
+  content: string;
+  type: 'custom' | 'template';
+  index: number;
+}
 
 interface MessagesProps {
   chatId: string;
@@ -18,7 +33,8 @@ interface MessagesProps {
   reload: UseChatHelpers['reload'];
   isReadonly: boolean;
   isArtifactVisible: boolean;
-  currentToolCall?: string;
+  enhancedThinkingInfo?: EnhancedThinkingInfo;
+  generatedQuestions?: Array<GeneratedQuestion>;
 }
 
 function PureMessages({
@@ -29,7 +45,8 @@ function PureMessages({
   setMessages,
   reload,
   isReadonly,
-  currentToolCall,
+  enhancedThinkingInfo,
+  generatedQuestions,
 }: MessagesProps) {
   const {
     containerRef: messagesContainerRef,
@@ -49,31 +66,36 @@ function PureMessages({
     >
       {messages.length === 0 && <Greeting />}
 
-      {messages.map((message, index) => (
-        <PreviewMessage
-          key={message.id}
-          chatId={chatId}
-          message={message}
-          isLoading={status === 'streaming' && messages.length - 1 === index}
-          vote={
-            votes
-              ? votes.find((vote) => vote.messageId === message.id)
-              : undefined
-          }
-          setMessages={setMessages}
-          reload={reload}
-          isReadonly={isReadonly}
-          requiresScrollPadding={
-            hasSentMessage && index === messages.length - 1
-          }
-        />
-      ))}
+      {messages.map((message, index) => {
+        const isLoadingMessage =
+          status === 'streaming' && messages.length - 1 === index;
 
-      {status === 'submitted' &&
-        messages.length > 0 &&
-        messages[messages.length - 1].role === 'user' && (
-          <ThinkingMessage currentToolCall={currentToolCall} />
-        )}
+        return (
+          <>
+            <PreviewMessage
+              key={message.id}
+              chatId={chatId}
+              message={message}
+              status={status}
+              isLoading={isLoadingMessage}
+              showThinking={isLoadingMessage}
+              vote={
+                votes
+                  ? votes.find((vote) => vote.messageId === message.id)
+                  : undefined
+              }
+              setMessages={setMessages}
+              reload={reload}
+              isReadonly={isReadonly}
+              requiresScrollPadding={
+                hasSentMessage && index === messages.length - 1
+              }
+              enhancedThinkingInfo={enhancedThinkingInfo}
+              generatedQuestions={generatedQuestions}
+            />
+          </>
+        );
+      })}
 
       <motion.div
         ref={messagesEndRef}
@@ -93,6 +115,10 @@ export const Messages = memo(PureMessages, (prevProps, nextProps) => {
   if (prevProps.messages.length !== nextProps.messages.length) return false;
   if (!equal(prevProps.messages, nextProps.messages)) return false;
   if (!equal(prevProps.votes, nextProps.votes)) return false;
+  if (!equal(prevProps.enhancedThinkingInfo, nextProps.enhancedThinkingInfo))
+    return false;
+  if (!equal(prevProps.generatedQuestions, nextProps.generatedQuestions))
+    return false;
 
   return true;
 });

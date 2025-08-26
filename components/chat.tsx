@@ -2,7 +2,7 @@
 
 import type { Attachment, UIMessage } from 'ai';
 import { useChat } from '@ai-sdk/react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { ChatHeader } from '@/components/chat-header';
 import type { Vote } from '@/lib/db/schema';
@@ -19,6 +19,43 @@ import { useSearchParams } from 'next/navigation';
 import { useChatVisibility } from '@/hooks/use-chat-visibility';
 import { useAutoResume } from '@/hooks/use-auto-resume';
 import { ChatSDKError } from '@/lib/errors';
+
+type StreamEvent =
+  | { type: 'thinking-start'; content?: string }
+  | {
+      type: 'thinking-update';
+      content?: string;
+      stepType?: string;
+      toolName?: string;
+    }
+  | { type: 'thinking-end'; content?: string }
+  | {
+      type: 'tool-progress';
+      toolName: string;
+      progress?: number;
+      content?: string;
+    }
+  | {
+      type: 'question-generated';
+      content: string;
+      questionType?: 'custom' | 'template';
+      questionIndex?: number;
+    }
+  | { type: 'questions-meta' | 'completion-meta' | 'error'; content?: string };
+// Types for enhanced thinking state
+interface ThinkingState {
+  isThinking: boolean;
+  message: string;
+  stepType?: string;
+  toolName?: string;
+  progress?: number;
+}
+
+interface ToolProgress {
+  toolName: string;
+  progress: number;
+  message: string;
+}
 
 export function Chat({
   id,
@@ -40,6 +77,19 @@ export function Chat({
   const { mutate } = useSWRConfig();
   const [toolCall, setToolCall] = useState<string>();
 
+  // Enhanced thinking state
+  const [thinkingState, setThinkingState] = useState<ThinkingState>({
+    isThinking: false,
+    message: '',
+  });
+
+  const [toolProgress, setToolProgress] = useState<
+    Record<string, ToolProgress>
+  >({});
+  const [generatedQuestions, setGeneratedQuestions] = useState<
+    Array<{ content: string; type: 'custom' | 'template'; index: number }>
+  >([]);
+
   const { visibilityType } = useChatVisibility({
     chatId: id,
     initialVisibilityType,
@@ -57,6 +107,7 @@ export function Chat({
     reload,
     experimental_resume,
     data,
+    setData,
   } = useChat({
     id,
     initialMessages,
@@ -70,8 +121,14 @@ export function Chat({
       selectedChatModel: initialChatModel,
       selectedVisibilityType: visibilityType,
     }),
+
     onFinish: () => {
       mutate(unstable_serialize(getChatHistoryPaginationKey));
+      // Reset thinking state when finished
+      setThinkingState({ isThinking: false, message: '' });
+      setToolProgress({});
+      setToolCall(undefined);
+      setGeneratedQuestions([]);
     },
     onToolCall({ toolCall }) {
       setToolCall(toolCall.toolName);
@@ -83,13 +140,14 @@ export function Chat({
           description: error.message,
         });
       }
+      setThinkingState({ isThinking: false, message: '' });
     },
   });
 
   const searchParams = useSearchParams();
   const query = searchParams.get('query');
-
   const [hasAppendedQuery, setHasAppendedQuery] = useState(false);
+  const lastIdxRef = useRef(0);
 
   useEffect(() => {
     if (query && !hasAppendedQuery) {
@@ -110,7 +168,75 @@ export function Chat({
 
   const [attachments, setAttachments] = useState<Array<Attachment>>([]);
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
-
+  useEffect(() => {
+    console.log('USE EFFECT', data);
+    const arr = (data as StreamEvent[] | undefined) ?? [];
+    for (let i = lastIdxRef.current; i < arr.length; i++) {
+      const evt = arr[i];
+      switch (evt.type) {
+        case 'thinking-start':
+          setThinkingState({
+            isThinking: true,
+            message: evt.content ?? 'Starting analysis...',
+          });
+          break;
+        case 'thinking-update':
+          setThinkingState((prev) => ({
+            ...prev,
+            isThinking: true,
+            message: evt.content ?? 'Processing...',
+            stepType: evt.stepType,
+            toolName: evt.toolName,
+          }));
+          break;
+        case 'thinking-end':
+          setThinkingState((prev) => ({
+            ...prev,
+            isThinking: false,
+            message: evt.content ?? 'Complete',
+          }));
+          setTimeout(
+            () => setThinkingState({ isThinking: false, message: '' }),
+            1000,
+          );
+          break;
+        case 'tool-progress':
+          setToolProgress((prev) => ({
+            ...prev,
+            [evt.toolName]: {
+              toolName: evt.toolName,
+              progress: evt.progress ?? 0,
+              message: evt.content ?? 'Processing...',
+            },
+          }));
+          break;
+        case 'question-generated':
+          setGeneratedQuestions((prev) => [
+            ...prev,
+            {
+              content: evt.content,
+              type: evt.questionType ?? 'custom',
+              index: evt.questionIndex ?? prev.length,
+            },
+          ]);
+          break;
+        case 'questions-meta':
+        case 'completion-meta':
+          try {
+            console.log('meta:', JSON.parse(evt.content ?? 'null'));
+          } catch {}
+          break;
+        case 'error':
+          toast({
+            type: 'error',
+            description: evt.content ?? 'An error occurred',
+          });
+          setThinkingState({ isThinking: false, message: '' });
+          break;
+      }
+    }
+    lastIdxRef.current = arr.length;
+  }, [data]);
   useAutoResume({
     autoResume,
     initialMessages,
@@ -134,6 +260,23 @@ export function Chat({
     }
   }, [toolCall, messages]);
 
+  // Enhanced thinking message that includes progress info
+  const enhancedThinkingInfo = useMemo(() => {
+    if (!thinkingState.isThinking && !currentToolCall) return undefined;
+
+    const currentProgress = currentToolCall
+      ? toolProgress[currentToolCall]
+      : undefined;
+
+    return {
+      currentToolCall: thinkingState.toolName || currentToolCall,
+      message: thinkingState.message,
+      progress: currentProgress?.progress,
+      stepType: thinkingState.stepType,
+      isThinking: thinkingState.isThinking || status === 'submitted',
+    };
+  }, [thinkingState, currentToolCall, toolProgress, status]);
+
   return (
     <>
       <div className="flex flex-col min-w-0 h-dvh bg-background">
@@ -146,7 +289,6 @@ export function Chat({
           isReadonly={isReadonly}
           session={session}
         />
-
         <Messages
           chatId={id}
           status={status}
@@ -156,6 +298,8 @@ export function Chat({
           reload={reload}
           isReadonly={isReadonly}
           isArtifactVisible={isArtifactVisible}
+          enhancedThinkingInfo={enhancedThinkingInfo}
+          generatedQuestions={generatedQuestions}
         />
 
         <form className="flex mx-auto px-4 bg-background pb-4 md:pb-6 gap-2 w-full md:max-w-3xl">
@@ -176,23 +320,6 @@ export function Chat({
           )}
         </form>
       </div>
-
-      {/* <Artifact
-        chatId={id}
-        input={input}
-        setInput={setInput}
-        handleSubmit={handleSubmit}
-        status={status}
-        stop={stop}
-        attachments={attachments}
-        setAttachments={setAttachments}
-        append={append}
-        messages={messages}
-        setMessages={setMessages}
-        reload={reload}
-        votes={votes}
-        isReadonly={isReadonly}
-      /> */}
     </>
   );
 }

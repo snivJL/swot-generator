@@ -210,7 +210,7 @@ function PureSuggestedActions({
           ))}
         </TabsList>
 
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
           {actionCategories.map((category) => (
             <TabsContent
               key={category.id}

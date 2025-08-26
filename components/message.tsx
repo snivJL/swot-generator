@@ -20,28 +20,53 @@ import { MessageReasoning } from './message-reasoning';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import { DownloadLink } from './download-link';
 import Image from 'next/image';
+import { EnhancedThinkingMessage } from './thinking-message';
+import type { EnhancedThinkingInfo } from './messages';
+interface GeneratedQuestion {
+  content: string;
+  type: 'custom' | 'template';
+  index: number;
+}
 
 const PurePreviewMessage = ({
   chatId,
   message,
   vote,
   isLoading,
+  status,
+  generatedQuestions,
   setMessages,
   reload,
   isReadonly,
   requiresScrollPadding,
+  showThinking,
+  enhancedThinkingInfo,
 }: {
   chatId: string;
   message: UIMessage;
   vote: Vote | undefined;
   isLoading: boolean;
+  status: UseChatHelpers['status'];
   setMessages: UseChatHelpers['setMessages'];
   reload: UseChatHelpers['reload'];
   isReadonly: boolean;
+  generatedQuestions?: Array<GeneratedQuestion>;
   requiresScrollPadding: boolean;
+  enhancedThinkingInfo?: EnhancedThinkingInfo;
+  showThinking: boolean;
 }) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
-  console.log('MESSAGE:', message);
+
+  if (showThinking) {
+    return (
+      <EnhancedThinkingMessage
+        currentToolCall={enhancedThinkingInfo?.currentToolCall}
+        message={enhancedThinkingInfo?.message}
+        progress={enhancedThinkingInfo?.progress}
+        stepType={enhancedThinkingInfo?.stepType}
+      />
+    );
+  }
   return (
     <AnimatePresence>
       <motion.div
@@ -174,7 +199,35 @@ const PurePreviewMessage = ({
                           isReadonly={isReadonly}
                         />
                       ) : toolName === 'generateQuestions' ? (
-                        <div>Generate Questions tool call</div>
+                        <div className="bg-muted/50 rounded-lg p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="size-2 bg-blue-500 rounded-full animate-pulse" />
+                            <span className="text-sm text-muted-foreground font-medium">
+                              Generating questions...
+                            </span>
+                          </div>
+                          {generatedQuestions &&
+                            generatedQuestions.length > 0 && (
+                              <div className="space-y-2 mt-3">
+                                {generatedQuestions.map((q) => (
+                                  <motion.div
+                                    key={`${q.index}-${q.type}`}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.3 }}
+                                    className={cn(
+                                      'p-2 rounded text-sm border-l-2',
+                                      q.type === 'custom'
+                                        ? 'border-blue-500 bg-blue-500/10'
+                                        : 'border-green-500 bg-green-500/10',
+                                    )}
+                                  >
+                                    {q.content}
+                                  </motion.div>
+                                ))}
+                              </div>
+                            )}
+                        </div>
                       ) : null}
                     </div>
                   );
@@ -217,9 +270,7 @@ const PurePreviewMessage = ({
                           type="memo"
                           className="my-2"
                         />
-                      ) : toolName === 'formatMemo' ? null : (
-                        <pre>{JSON.stringify(result, null, 2)}</pre>
-                      )}
+                      ) : toolName === 'formatMemo' ? null : null}
                     </div>
                   );
                 }
@@ -247,6 +298,7 @@ export const PreviewMessage = memo(
   (prevProps, nextProps) => {
     if (prevProps.isLoading !== nextProps.isLoading) return false;
     if (prevProps.message.id !== nextProps.message.id) return false;
+    if (prevProps.showThinking !== nextProps.showThinking) return false;
     if (prevProps.requiresScrollPadding !== nextProps.requiresScrollPadding)
       return false;
     if (!equal(prevProps.message.parts, nextProps.message.parts)) return false;
