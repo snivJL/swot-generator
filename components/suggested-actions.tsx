@@ -1,17 +1,17 @@
-"use client";
+'use client';
 
-import type React from "react";
+import type React from 'react';
 
-import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "./ui/button";
-import { memo, useState } from "react";
-import type { UseChatHelpers } from "@ai-sdk/react";
-import type { Attachment } from "ai";
-import equal from "fast-deep-equal";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "./ui/drawer";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
-import { BarChart3, Search, Sparkles, TrendingUp, Shield } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from 'framer-motion';
+import { Button } from './ui/button';
+import { memo, useState } from 'react';
+import type { UseChatHelpers } from '@ai-sdk/react';
+import type { Attachment } from 'ai';
+import equal from 'fast-deep-equal';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from './ui/drawer';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
+import { BarChart3, Search, Sparkles, TrendingUp, Shield } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface SuggestedAction {
   question: string;
@@ -28,57 +28,57 @@ interface ActionCategory {
 
 interface SuggestedActionsProps {
   chatId: string;
-  append: UseChatHelpers["append"];
+  append: UseChatHelpers['append'];
   attachments: Array<Attachment>;
-  mode?: "initial" | "drawer";
+  mode?: 'initial' | 'drawer';
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
 
 const actionCategories: ActionCategory[] = [
   {
-    id: "screening",
-    name: "Screening & Initial",
+    id: 'screening',
+    name: 'Screening & Initial',
     icon: Search,
-    color: "from-blue-500 to-cyan-500",
+    color: 'from-blue-500 to-cyan-500',
     actions: [
       {
         question: "Explain the company's business model in simple terms",
         action: "Explain the company's business model in simple terms.",
       },
       {
-        question: "Summarize the founding team and their relevant experience",
-        action: "Summarize the founding team and their relevant experience.",
+        question: 'Summarize the founding team and their relevant experience',
+        action: 'Summarize the founding team and their relevant experience.',
       },
       {
-        question: "Give me the key financials for the last 2 years",
-        action: "Give me the key financials for the last 2 years.",
+        question: 'Give me the key financials for the last 2 years',
+        action: 'Give me the key financials for the last 2 years.',
       },
       {
         question:
-          "What are the strengths, weaknesses, opportunities and risks flagged?",
+          'What are the strengths, weaknesses, opportunities and risks flagged?',
         action:
-          "What are the strengths, weaknesses, opportunities and risks flagged in the documents?",
+          'What are the strengths, weaknesses, opportunities and risks flagged in the documents?',
       },
     ],
   },
   {
-    id: "commercial",
-    name: "Commercial & Ops",
+    id: 'commercial',
+    name: 'Commercial & Ops',
     icon: BarChart3,
-    color: "from-green-500 to-teal-500",
+    color: 'from-green-500 to-teal-500',
     actions: [
       {
-        question: "Summarize the customer base and any concentration issues",
-        action: "Summarize the customer base and any concentration issues.",
+        question: 'Summarize the customer base and any concentration issues',
+        action: 'Summarize the customer base and any concentration issues.',
       },
       {
-        question: "What does the sales and distribution model look like?",
-        action: "What does the sales and distribution model look like?",
+        question: 'What does the sales and distribution model look like?',
+        action: 'What does the sales and distribution model look like?',
       },
       {
-        question: "What initiatives has management outlined for growth?",
-        action: "What initiatives has management outlined for growth?",
+        question: 'What initiatives has management outlined for growth?',
+        action: 'What initiatives has management outlined for growth?',
       },
       {
         question:
@@ -89,61 +89,61 @@ const actionCategories: ActionCategory[] = [
     ],
   },
   {
-    id: "financial",
-    name: "Due diligence",
+    id: 'financial',
+    name: 'Due diligence',
     icon: Shield,
-    color: "from-red-500 to-orange-500",
+    color: 'from-red-500 to-orange-500',
     actions: [
       {
         question:
-          "Write a list of Financial & Unit Economics due diligence questions",
+          'Write a list of Financial & Unit Economics due diligence questions',
         action:
-          "Write a list of Financial & Unit Economics due diligence questions",
+          'Write a list of Financial & Unit Economics due diligence questions',
       },
       {
         question:
-          "Write a list of Market, Customers & Growth due diligence questions",
+          'Write a list of Market, Customers & Growth due diligence questions',
         action:
-          "Write a list of Market, Customers & Growth due diligence questions",
+          'Write a list of Market, Customers & Growth due diligence questions',
       },
       {
         question:
-          "Write a list of Operations, Technology & People due diligence questions",
+          'Write a list of Operations, Technology & People due diligence questions',
         action:
-          "Write a list of Operations, Technology & People due diligence questions",
+          'Write a list of Operations, Technology & People due diligence questions',
       },
       {
         question:
-          "Write a list of Legal, Compliance & Governance due diligence questions",
+          'Write a list of Legal, Compliance & Governance due diligence questions',
         action:
-          "Write a list of Legal, Compliance & Governance due diligence questions",
+          'Write a list of Legal, Compliance & Governance due diligence questions',
       },
     ],
   },
   {
-    id: "exit",
-    name: "Exit & Investment",
+    id: 'exit',
+    name: 'Exit & Investment',
     icon: TrendingUp,
-    color: "from-purple-500 to-pink-500",
+    color: 'from-purple-500 to-pink-500',
     actions: [
       {
-        question: "List the key investment highlights mentioned",
-        action: "List the key investment highlights mentioned.",
+        question: 'List the key investment highlights mentioned',
+        action: 'List the key investment highlights mentioned.',
       },
       {
         question:
-          "Summarize how the company differentiates itself from competitors",
+          'Summarize how the company differentiates itself from competitors',
         action:
-          "Summarize how the company differentiates itself from competitors.",
+          'Summarize how the company differentiates itself from competitors.',
       },
       {
         question:
-          "What rationale is given for a future buyer to be interested?",
-        action: "What rationale is given for a future buyer to be interested.",
+          'What rationale is given for a future buyer to be interested?',
+        action: 'What rationale is given for a future buyer to be interested.',
       },
       {
-        question: "List any comparable companies or transactions mentioned",
-        action: "List any comparable companies or transactions mentioned.",
+        question: 'List any comparable companies or transactions mentioned',
+        action: 'List any comparable companies or transactions mentioned.',
       },
     ],
   },
@@ -153,21 +153,21 @@ function PureSuggestedActions({
   chatId,
   append,
   attachments,
-  mode = "initial",
+  mode = 'initial',
   isOpen,
   onOpenChange,
 }: SuggestedActionsProps) {
   const [activeTab, setActiveTab] = useState(actionCategories[0].id);
 
   const handleActionClick = async (action: string) => {
-    window.history.replaceState({}, "", `/chat/${chatId}`);
+    window.history.replaceState({}, '', `/chat/${chatId}`);
     append({
-      role: "user",
+      role: 'user',
       content: action,
       experimental_attachments: attachments,
     });
 
-    if (mode === "drawer" && onOpenChange) {
+    if (mode === 'drawer' && onOpenChange) {
       onOpenChange(false);
     }
   };
@@ -189,12 +189,12 @@ function PureSuggestedActions({
       y: 0,
       transition: {
         duration: 0.3,
-        ease: "easeOut",
+        ease: 'easeOut',
       },
     },
   };
 
-  const renderContent = ({ mode }: { mode?: "initial" | "drawer" }) => (
+  const renderContent = ({ mode }: { mode?: 'initial' | 'drawer' }) => (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4 mb-6">
@@ -205,7 +205,7 @@ function PureSuggestedActions({
               className="text-xs sm:text-sm"
             >
               <span className="hidden sm:inline">{category.name}</span>
-              <span className="sm:hidden">{category.name.split(" ")[0]}</span>
+              <span className="sm:hidden">{category.name.split(' ')[0]}</span>
             </TabsTrigger>
           ))}
         </TabsList>
@@ -223,8 +223,8 @@ function PureSuggestedActions({
                   initial="hidden"
                   animate="visible"
                   exit="hidden"
-                  className={cn("grid gap-3", {
-                    "lg:grid-cols-2": mode === "drawer",
+                  className={cn('grid gap-3', {
+                    'lg:grid-cols-2': mode === 'drawer',
                   })}
                 >
                   {category.actions.map((suggestedAction, actionIndex) => (
@@ -269,7 +269,7 @@ function PureSuggestedActions({
     </div>
   );
 
-  if (mode === "drawer") {
+  if (mode === 'drawer') {
     return (
       <Drawer open={isOpen} onOpenChange={onOpenChange}>
         <DrawerContent className="max-h-[60vh]">
@@ -305,5 +305,5 @@ export const SuggestedActions = memo(
     if (prevProps.isOpen !== nextProps.isOpen) return false;
     if (!equal(prevProps.attachments, nextProps.attachments)) return false;
     return true;
-  }
+  },
 );

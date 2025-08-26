@@ -3,7 +3,7 @@ import {
   extractReasoningMiddleware,
   wrapLanguageModel,
 } from 'ai';
-import { openai } from "@ai-sdk/openai"
+import { openai } from '@ai-sdk/openai';
 import { isTestEnvironment } from '../constants';
 import {
   artifactModel,
@@ -23,13 +23,13 @@ export const myProvider = isTestEnvironment
     })
   : customProvider({
       languageModels: {
-        'chat-model': openai("o4-mini"),
+        'chat-model': openai('o4-mini'),
         'chat-model-reasoning': wrapLanguageModel({
-          model: openai("o4-mini"),
+          model: openai('o4-mini'),
           middleware: extractReasoningMiddleware({ tagName: 'think' }),
         }),
-        'title-model':openai("o4-mini") ,
-        'artifact-model': openai("o4-mini"),
+        'title-model': openai('o4-mini'),
+        'artifact-model': openai('o4-mini'),
       },
       imageModels: {
         'small-model': openai.image('dall-e-3'),

@@ -1,9 +1,9 @@
-import { tool } from "ai";
-import { z } from "zod";
+import { tool } from 'ai';
+import { z } from 'zod';
 
 export const formatMemo = tool({
   description:
-    "Use this tool when the user asks to generate due diligence follow-up questions to get the desired output format",
+    'Use this tool when the user asks to generate due diligence follow-up questions to get the desired output format',
   parameters: z.object({}),
   execute: async () => {
     return `

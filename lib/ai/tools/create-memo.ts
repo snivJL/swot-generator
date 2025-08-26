@@ -1,5 +1,5 @@
-import { DataStreamWriter, tool } from "ai";
-import { z } from "zod";
+import { type DataStreamWriter, tool } from 'ai';
+import { z } from 'zod';
 import {
   Document,
   Packer,
@@ -8,20 +8,20 @@ import {
   Header,
   TextRun,
   ImageRun,
-} from "docx";
-import fs from "fs";
-import { join } from "path";
-import { put } from "@vercel/blob";
-import { generateUUID } from "@/lib/utils";
+} from 'docx';
+import fs from 'node:fs';
+import { join } from 'node:path';
+import { put } from '@vercel/blob';
+import { generateUUID } from '@/lib/utils';
 
 async function generateMemoDocx(
   title: string,
   sections: {
     heading: string;
     questions: string[];
-  }[]
+  }[],
 ): Promise<Buffer> {
-  const logoPath = join(process.cwd(), "public", "logo.png");
+  const logoPath = join(process.cwd(), 'public', 'logo.png');
   const logoBuffer = fs.readFileSync(logoPath);
 
   const doc = new Document({
@@ -29,13 +29,13 @@ async function generateMemoDocx(
     numbering: {
       config: [
         {
-          reference: "questions",
+          reference: 'questions',
           levels: [
             {
               level: 0,
-              format: "decimal",
-              text: "%1.",
-              alignment: "left",
+              format: 'decimal',
+              text: '%1.',
+              alignment: 'left',
             },
           ],
         },
@@ -48,15 +48,15 @@ async function generateMemoDocx(
             children: [
               new Paragraph({
                 children: [
-                  new TextRun(""),
+                  new TextRun(''),
                   new ImageRun({
                     data: logoBuffer,
                     transformation: { width: 100, height: 48 },
-                    type: "png",
+                    type: 'png',
                   }),
                 ],
                 // push image to the right
-                alignment: "right",
+                alignment: 'right',
               }),
             ],
           }),
@@ -74,12 +74,12 @@ async function generateMemoDocx(
             (q) =>
               new Paragraph({
                 text: q,
-                numbering: { reference: "questions", level: 0 },
+                numbering: { reference: 'questions', level: 0 },
                 spacing: { after: 100 },
-              })
+              }),
           );
           // add a bit of space before next section
-          const spacer = new Paragraph({ text: "" });
+          const spacer = new Paragraph({ text: '' });
           return [headingPara, ...listParas, spacer];
         }),
       },
@@ -94,36 +94,36 @@ interface CreateDocumentProps {
 }
 
 const companyQuestions = [
-  "What are the primary sources of revenue, and how stable and diversified are they?",
-  "What differentiates your company from competitors, and how sustainable is this advantage?",
-  "What are the biggest operational or strategic risks the company faces, and how are they being mitigated?",
+  'What are the primary sources of revenue, and how stable and diversified are they?',
+  'What differentiates your company from competitors, and how sustainable is this advantage?',
+  'What are the biggest operational or strategic risks the company faces, and how are they being mitigated?',
 ];
 export const createMemo = ({ dataStream }: CreateDocumentProps) =>
   tool({
     description:
-      "Use this tool when the user asks to export due diligence questions in a .docx file",
+      'Use this tool when the user asks to export due diligence questions in a .docx file',
     parameters: z.object({
       title: z.string(),
       businessModel: z
         .array(z.string())
         .length(3)
-        .describe("3 Questions related to Business Model"),
+        .describe('3 Questions related to Business Model'),
       marketOpportunity: z
         .array(z.string())
         .length(3)
-        .describe("3 Questions related to Market Opportunity"),
+        .describe('3 Questions related to Market Opportunity'),
       financialHealth: z
         .array(z.string())
         .length(3)
-        .describe("3 Questions related to Financial Health"),
+        .describe('3 Questions related to Financial Health'),
       leadershipTeam: z
         .array(z.string())
         .length(3)
-        .describe("3 Questions related to Leadership Team"),
+        .describe('3 Questions related to Leadership Team'),
       risksAndChallenges: z
         .array(z.string())
         .length(3)
-        .describe("3 Questions related to Risks & Challenges"),
+        .describe('3 Questions related to Risks & Challenges'),
     }),
     execute: async ({
       title,
@@ -135,26 +135,26 @@ export const createMemo = ({ dataStream }: CreateDocumentProps) =>
     }) => {
       const id = generateUUID();
       dataStream.writeData({
-        type: "id",
+        type: 'id',
         content: id,
       });
 
       dataStream.writeData({
-        type: "title",
+        type: 'title',
         content: title,
       });
 
       dataStream.writeData({
-        type: "clear",
-        content: "",
+        type: 'clear',
+        content: '',
       });
       // 1) Build an ordered list of sections
       const sections = [
-        { heading: "A. Business Model", questions: businessModel },
-        { heading: "B. Market Opportunity", questions: marketOpportunity },
-        { heading: "C. Financial Health", questions: financialHealth },
-        { heading: "D. Leadership Team", questions: leadershipTeam },
-        { heading: "E. Risks & Challenges", questions: risksAndChallenges },
+        { heading: 'A. Business Model', questions: businessModel },
+        { heading: 'B. Market Opportunity', questions: marketOpportunity },
+        { heading: 'C. Financial Health', questions: financialHealth },
+        { heading: 'D. Leadership Team', questions: leadershipTeam },
+        { heading: 'E. Risks & Challenges', questions: risksAndChallenges },
       ];
 
       // 2) Generate docx buffer
@@ -162,16 +162,16 @@ export const createMemo = ({ dataStream }: CreateDocumentProps) =>
 
       // 3) Write to temp file
       const filename = `due-diligence-questions-${Date.now()}.docx`;
-      const outPath = join("/tmp", filename);
+      const outPath = join('/tmp', filename);
       fs.writeFileSync(outPath, buffer);
 
       // 4) Upload to Vercel Blob
       const blob = await put(filename, buffer, {
-        access: "public",
+        access: 'public',
         contentType:
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       });
-      dataStream.writeData({ type: "finish", content: "" });
+      dataStream.writeData({ type: 'finish', content: '' });
 
       return {
         id,
@@ -184,34 +184,34 @@ export const createMemo = ({ dataStream }: CreateDocumentProps) =>
 export const createMemoV2 = ({ dataStream }: CreateDocumentProps) =>
   tool({
     description:
-      "Use this tool when the user asks to export due diligence questions",
+      'Use this tool when the user asks to export due diligence questions',
     parameters: z.object({
       title: z.string(),
       questions: z
         .array(z.string())
         .length(3)
-        .describe("3 Questions related to the company"),
+        .describe('3 Questions related to the company'),
     }),
     execute: async ({ title, questions }) => {
       const id = generateUUID();
       dataStream.writeData({
-        type: "id",
+        type: 'id',
         content: id,
       });
 
       dataStream.writeData({
-        type: "title",
+        type: 'title',
         content: title,
       });
 
       dataStream.writeData({
-        type: "clear",
-        content: "",
+        type: 'clear',
+        content: '',
       });
       // 1) Build an ordered list of sections
       const sections = [
-        { heading: "A.Company Questions", questions: companyQuestions },
-        { heading: "B.Generated Questions", questions },
+        { heading: 'A.Company Questions', questions: companyQuestions },
+        { heading: 'B.Generated Questions', questions },
       ];
 
       // 2) Generate docx buffer
@@ -219,16 +219,16 @@ export const createMemoV2 = ({ dataStream }: CreateDocumentProps) =>
 
       // 3) Write to temp file
       const filename = `due-diligence-questions-${Date.now()}.docx`;
-      const outPath = join("/tmp", filename);
+      const outPath = join('/tmp', filename);
       fs.writeFileSync(outPath, buffer);
 
       // 4) Upload to Vercel Blob
       const blob = await put(filename, buffer, {
-        access: "public",
+        access: 'public',
         contentType:
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       });
-      dataStream.writeData({ type: "finish", content: "" });
+      dataStream.writeData({ type: 'finish', content: '' });
 
       return {
         id,

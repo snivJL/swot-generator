@@ -1,24 +1,24 @@
-import { cx } from "class-variance-authority";
-import { motion, AnimatePresence } from "framer-motion";
+import { cx } from 'class-variance-authority';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export const ThinkingMessage = ({
   currentToolCall,
 }: {
   currentToolCall?: string;
 }) => {
-  const role = "assistant";
+  const role = 'assistant';
   const message =
-    currentToolCall === "createMemo"
-      ? "Creating Memo"
-      : currentToolCall === "createSwot"
-      ? "Creating SWOT"
-      : currentToolCall === "formatMemo"
-      ? "Formatting Memo"
-      : currentToolCall === "generateQuestions"
-      ? "Generating questions"
-      : currentToolCall === "addResource"
-      ? "Adding information"
-      : "Thinking";
+    currentToolCall === 'createMemo'
+      ? 'Creating Memo'
+      : currentToolCall === 'createSwot'
+        ? 'Creating SWOT'
+        : currentToolCall === 'formatMemo'
+          ? 'Formatting Memo'
+          : currentToolCall === 'generateQuestions'
+            ? 'Generating questions'
+            : currentToolCall === 'addResource'
+              ? 'Adding information'
+              : 'Thinking';
 
   return (
     <motion.div
@@ -30,19 +30,19 @@ export const ThinkingMessage = ({
     >
       <div
         className={cx(
-          "flex gap-4 group-data-[role=user]/message:px-3 w-full group-data-[role=user]/message:w-fit group-data-[role=user]/message:ml-auto group-data-[role=user]/message:max-w-2xl group-data-[role=user]/message:py-2 rounded-xl",
+          'flex gap-4 group-data-[role=user]/message:px-3 w-full group-data-[role=user]/message:w-fit group-data-[role=user]/message:ml-auto group-data-[role=user]/message:max-w-2xl group-data-[role=user]/message:py-2 rounded-xl',
           {
-            "group-data-[role=user]/message:bg-muted": true,
-          }
+            'group-data-[role=user]/message:bg-muted': true,
+          },
         )}
       >
         {/* Minimal avatar */}
         <div
           className="size-8 flex items-center rounded-full justify-center shrink-0"
-          style={{ backgroundColor: "#171717" }}
+          style={{ backgroundColor: '#171717' }}
         >
           <motion.div
-            className="w-1.5 h-1.5 rounded-full bg-white"
+            className="size-1.5 rounded-full bg-white"
             animate={{
               scale: [1, 1.3, 1],
               opacity: [0.7, 1, 0.7],
@@ -50,7 +50,7 @@ export const ThinkingMessage = ({
             transition={{
               duration: 1.5,
               repeat: Number.POSITIVE_INFINITY,
-              ease: "easeInOut",
+              ease: 'easeInOut',
             }}
           />
         </div>
@@ -71,9 +71,10 @@ export const ThinkingMessage = ({
           <div className="flex gap-1">
             {[...Array(3)].map((_, i) => (
               <motion.div
+                // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
                 key={i}
                 className="w-1 h-1 rounded-full"
-                style={{ backgroundColor: "#171717" }}
+                style={{ backgroundColor: '#171717' }}
                 animate={{
                   opacity: [0.3, 1, 0.3],
                 }}
@@ -81,7 +82,7 @@ export const ThinkingMessage = ({
                   duration: 1.2,
                   delay: i * 0.2,
                   repeat: Number.POSITIVE_INFINITY,
-                  ease: "easeInOut",
+                  ease: 'easeInOut',
                 }}
               />
             ))}

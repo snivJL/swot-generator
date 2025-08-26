@@ -4,9 +4,9 @@ import {
   createDataStream,
   smoothStream,
   streamText,
-} from "ai";
-import { auth, type UserType } from "@/app/(auth)/auth";
-import { systemPrompt } from "@/lib/ai/prompts";
+} from 'ai';
+import { auth, type UserType } from '@/app/(auth)/auth';
+import { systemPrompt } from '@/lib/ai/prompts';
 import {
   createStreamId,
   deleteChatById,
@@ -16,25 +16,22 @@ import {
   getStreamIdsByChatId,
   saveChat,
   saveMessages,
-} from "@/lib/db/queries";
-import { generateUUID, getTrailingMessageId } from "@/lib/utils";
-import { generateTitleFromUserMessage } from "../../actions";
-import { isProductionEnvironment } from "@/lib/constants";
-import { myProvider } from "@/lib/ai/providers";
-import { entitlementsByUserType } from "@/lib/ai/entitlements";
-import { postRequestBodySchema, type PostRequestBody } from "./schema";
+} from '@/lib/db/queries';
+import { generateUUID, getTrailingMessageId } from '@/lib/utils';
+import { generateTitleFromUserMessage } from '../../actions';
+import { isProductionEnvironment } from '@/lib/constants';
+import { myProvider } from '@/lib/ai/providers';
+import { postRequestBodySchema, type PostRequestBody } from './schema';
 import {
   createResumableStreamContext,
   type ResumableStreamContext,
-} from "resumable-stream";
-import { after } from "next/server";
-import type { Chat } from "@/lib/db/schema";
-import { differenceInSeconds } from "date-fns";
-import { ChatSDKError } from "@/lib/errors";
-import { createSwot } from "@/lib/ai/tools/create-swot";
-import { formatMemo } from "@/lib/ai/tools/format-memo";
-import { createMemo, createMemoV2 } from "@/lib/ai/tools/create-memo";
-import { generateQuestions } from "@/lib/ai/tools/generate-questions";
+} from 'resumable-stream';
+import { after } from 'next/server';
+import type { Chat } from '@/lib/db/schema';
+import { differenceInSeconds } from 'date-fns';
+import { ChatSDKError } from '@/lib/errors';
+import { createSwot } from '@/lib/ai/tools/create-swot';
+import { generateQuestions } from '@/lib/ai/tools/generate-questions';
 
 export const maxDuration = 60;
 
@@ -47,9 +44,9 @@ function getStreamContext() {
         waitUntil: after,
       });
     } catch (error: any) {
-      if (error.message.includes("REDIS_URL")) {
+      if (error.message.includes('REDIS_URL')) {
         console.log(
-          " > Resumable streams are disabled due to missing REDIS_URL"
+          ' > Resumable streams are disabled due to missing REDIS_URL',
         );
       } else {
         console.error(error);
@@ -62,25 +59,25 @@ function getStreamContext() {
 
 export async function POST(request: Request) {
   let requestBody: PostRequestBody;
-  console.log("Api Called");
+  console.log('Api Called');
   try {
     const json = await request.json();
     requestBody = postRequestBodySchema.parse(json);
   } catch (_) {
-    return new ChatSDKError("bad_request:api").toResponse();
+    return new ChatSDKError('bad_request:api').toResponse();
   }
   try {
     const { id, message, selectedChatModel, selectedVisibilityType } =
       requestBody;
-    console.log("Checking auth");
+    console.log('Checking auth');
     const session = await auth();
 
     if (!session?.user) {
-      return new ChatSDKError("unauthorized:chat").toResponse();
+      return new ChatSDKError('unauthorized:chat').toResponse();
     }
 
     const userType: UserType = session.user.type;
-    console.log("Getting message Count");
+    console.log('Getting message Count');
     const messageCount = await getMessageCountByUserId({
       id: session.user.id,
       differenceInHours: 24,
@@ -103,10 +100,10 @@ export async function POST(request: Request) {
       });
     } else {
       if (chat.userId !== session.user.id) {
-        return new ChatSDKError("forbidden:chat").toResponse();
+        return new ChatSDKError('forbidden:chat').toResponse();
       }
     }
-    console.log("Getting messages...");
+    console.log('Getting messages...');
     const previousMessages = await getMessagesByChatId({ id });
 
     const messages = appendClientMessage({
@@ -114,13 +111,13 @@ export async function POST(request: Request) {
       messages: previousMessages,
       message,
     });
-    console.log("Saving messages...");
+    console.log('Saving messages...');
     await saveMessages({
       messages: [
         {
           chatId: id,
           id: message.id,
-          role: "user",
+          role: 'user',
           parts: message.parts,
           attachments: message.experimental_attachments ?? [],
           createdAt: new Date(),
@@ -130,7 +127,7 @@ export async function POST(request: Request) {
 
     const streamId = generateUUID();
     await createStreamId({ streamId, chatId: id });
-    console.log("Creating data stream...");
+    console.log('Creating data stream...');
     const stream = createDataStream({
       execute: (dataStream) => {
         const result = streamText({
@@ -138,8 +135,8 @@ export async function POST(request: Request) {
           system: systemPrompt({ selectedChatModel }),
           messages,
           maxSteps: 5,
-          experimental_activeTools: ["createSwot", "generateQuestions"],
-          experimental_transform: smoothStream({ chunking: "word" }),
+          experimental_activeTools: ['createSwot', 'generateQuestions'],
+          experimental_transform: smoothStream({ chunking: 'word' }),
           experimental_generateMessageId: generateUUID,
           tools: {
             createSwot: createSwot({ dataStream }),
@@ -150,44 +147,44 @@ export async function POST(request: Request) {
 
           onStepFinish({ text, toolCalls, toolResults, finishReason, usage }) {
             console.groupCollapsed(
-              "%c✨ Step Finished",
-              "color: #0A6AE7; font-weight: bold; font-size: 12px;"
+              '%c✨ Step Finished',
+              'color: #0A6AE7; font-weight: bold; font-size: 12px;',
             );
-            console.log("%cText:", "font-weight: bold;", text);
+            console.log('%cText:', 'font-weight: bold;', text);
             if (Array.isArray(toolCalls) && toolCalls.length) {
-              console.groupCollapsed("🔧 Tool Calls");
+              console.groupCollapsed('🔧 Tool Calls');
               toolCalls.forEach((call, i) => {
                 console.groupCollapsed(`Call ${i} – ${call.toolName}`);
-                console.log("%cType:", "font-weight:bold;", call.type);
+                console.log('%cType:', 'font-weight:bold;', call.type);
                 console.log(
-                  "%ctoolCallId:",
-                  "font-weight:bold;",
-                  call.toolCallId
+                  '%ctoolCallId:',
+                  'font-weight:bold;',
+                  call.toolCallId,
                 );
-                console.log("Args (JSON):", JSON.stringify(call.args, null, 2));
+                console.log('Args (JSON):', JSON.stringify(call.args, null, 2));
                 console.groupEnd();
               });
               console.groupEnd();
             } else {
-              console.log("%cTool Calls:", "font-weight: bold;", toolCalls);
+              console.log('%cTool Calls:', 'font-weight: bold;', toolCalls);
             }
             if (Array.isArray(toolResults) && toolResults.length) {
-              console.groupCollapsed("📥 Tool Results");
+              console.groupCollapsed('📥 Tool Results');
               toolResults.forEach((res, i) => {
                 console.groupCollapsed(`Result ${i} – ${res.toolName}`);
-                console.log("%cType:", "font-weight:bold;", res.type);
+                console.log('%cType:', 'font-weight:bold;', res.type);
                 console.log(
-                  "%ctoolCallId:",
-                  "font-weight:bold;",
-                  res.toolCallId
+                  '%ctoolCallId:',
+                  'font-weight:bold;',
+                  res.toolCallId,
                 );
-                console.log("%cArgs:", "font-weight:bold;", res.args);
+                console.log('%cArgs:', 'font-weight:bold;', res.args);
                 console.dir(res.result, { depth: null });
                 console.groupEnd();
               });
             }
-            console.log("%cFinish Reason:", "font-weight: bold;", finishReason);
-            console.log("%cUsage:", "font-weight: bold;", usage);
+            console.log('%cFinish Reason:', 'font-weight: bold;', finishReason);
+            console.log('%cUsage:', 'font-weight: bold;', usage);
             console.groupEnd();
           },
           onFinish: async ({ response }) => {
@@ -195,12 +192,12 @@ export async function POST(request: Request) {
               try {
                 const assistantId = getTrailingMessageId({
                   messages: response.messages.filter(
-                    (message) => message.role === "assistant"
+                    (message) => message.role === 'assistant',
                   ),
                 });
 
                 if (!assistantId) {
-                  throw new Error("No assistant message found!");
+                  throw new Error('No assistant message found!');
                 }
 
                 const [, assistantMessage] = appendResponseMessages({
@@ -208,7 +205,7 @@ export async function POST(request: Request) {
                   responseMessages: response.messages,
                 });
 
-                console.log("ASSISTANT MESSAGE", assistantMessage);
+                console.log('ASSISTANT MESSAGE', assistantMessage);
 
                 await saveMessages({
                   messages: [
@@ -224,13 +221,13 @@ export async function POST(request: Request) {
                   ],
                 });
               } catch (_) {
-                console.error("Failed to save chat");
+                console.error('Failed to save chat');
               }
             }
           },
           experimental_telemetry: {
             isEnabled: isProductionEnvironment,
-            functionId: "stream-text",
+            functionId: 'stream-text',
           },
         });
 
@@ -241,7 +238,7 @@ export async function POST(request: Request) {
         });
       },
       onError: () => {
-        return "Oops, an error occurred!";
+        return 'Oops, an error occurred!';
       },
     });
 
@@ -249,7 +246,7 @@ export async function POST(request: Request) {
 
     if (streamContext) {
       return new Response(
-        await streamContext.resumableStream(streamId, () => stream)
+        await streamContext.resumableStream(streamId, () => stream),
       );
     } else {
       return new Response(stream);
@@ -270,16 +267,16 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const chatId = searchParams.get("chatId");
+  const chatId = searchParams.get('chatId');
 
   if (!chatId) {
-    return new ChatSDKError("bad_request:api").toResponse();
+    return new ChatSDKError('bad_request:api').toResponse();
   }
 
   const session = await auth();
 
   if (!session?.user) {
-    return new ChatSDKError("unauthorized:chat").toResponse();
+    return new ChatSDKError('unauthorized:chat').toResponse();
   }
 
   let chat: Chat;
@@ -287,27 +284,27 @@ export async function GET(request: Request) {
   try {
     chat = await getChatById({ id: chatId });
   } catch {
-    return new ChatSDKError("not_found:chat").toResponse();
+    return new ChatSDKError('not_found:chat').toResponse();
   }
 
   if (!chat) {
-    return new ChatSDKError("not_found:chat").toResponse();
+    return new ChatSDKError('not_found:chat').toResponse();
   }
 
-  if (chat.visibility === "private" && chat.userId !== session.user.id) {
-    return new ChatSDKError("forbidden:chat").toResponse();
+  if (chat.visibility === 'private' && chat.userId !== session.user.id) {
+    return new ChatSDKError('forbidden:chat').toResponse();
   }
 
   const streamIds = await getStreamIdsByChatId({ chatId });
 
   if (!streamIds.length) {
-    return new ChatSDKError("not_found:stream").toResponse();
+    return new ChatSDKError('not_found:stream').toResponse();
   }
 
   const recentStreamId = streamIds.at(-1);
 
   if (!recentStreamId) {
-    return new ChatSDKError("not_found:stream").toResponse();
+    return new ChatSDKError('not_found:stream').toResponse();
   }
 
   const emptyDataStream = createDataStream({
@@ -316,7 +313,7 @@ export async function GET(request: Request) {
 
   const stream = await streamContext.resumableStream(
     recentStreamId,
-    () => emptyDataStream
+    () => emptyDataStream,
   );
 
   /*
@@ -331,7 +328,7 @@ export async function GET(request: Request) {
       return new Response(emptyDataStream, { status: 200 });
     }
 
-    if (mostRecentMessage.role !== "assistant") {
+    if (mostRecentMessage.role !== 'assistant') {
       return new Response(emptyDataStream, { status: 200 });
     }
 
@@ -344,7 +341,7 @@ export async function GET(request: Request) {
     const restoredStream = createDataStream({
       execute: (buffer) => {
         buffer.writeData({
-          type: "append-message",
+          type: 'append-message',
           message: JSON.stringify(mostRecentMessage),
         });
       },
@@ -358,22 +355,22 @@ export async function GET(request: Request) {
 
 export async function DELETE(request: Request) {
   const { searchParams } = new URL(request.url);
-  const id = searchParams.get("id");
+  const id = searchParams.get('id');
 
   if (!id) {
-    return new ChatSDKError("bad_request:api").toResponse();
+    return new ChatSDKError('bad_request:api').toResponse();
   }
 
   const session = await auth();
 
   if (!session?.user) {
-    return new ChatSDKError("unauthorized:chat").toResponse();
+    return new ChatSDKError('unauthorized:chat').toResponse();
   }
 
   const chat = await getChatById({ id });
 
   if (chat.userId !== session.user.id) {
-    return new ChatSDKError("forbidden:chat").toResponse();
+    return new ChatSDKError('forbidden:chat').toResponse();
   }
 
   const deletedChat = await deleteChatById({ id });
