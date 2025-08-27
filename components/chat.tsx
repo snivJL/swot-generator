@@ -2,7 +2,7 @@
 
 import type { Attachment, UIMessage } from 'ai';
 import { useChat } from '@ai-sdk/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { ChatHeader } from '@/components/chat-header';
 import type { Vote } from '@/lib/db/schema';
@@ -20,41 +20,26 @@ import { useChatVisibility } from '@/hooks/use-chat-visibility';
 import { useAutoResume } from '@/hooks/use-auto-resume';
 import { ChatSDKError } from '@/lib/errors';
 
-type StreamEvent =
-  | { type: 'thinking-start'; content?: string }
-  | {
-      type: 'thinking-update';
-      content?: string;
-      stepType?: string;
-      toolName?: string;
-    }
-  | { type: 'thinking-end'; content?: string }
-  | {
-      type: 'tool-progress';
-      toolName: string;
-      progress?: number;
-      content?: string;
-    }
-  | {
-      type: 'question-generated';
-      content: string;
-      questionType?: 'custom' | 'template';
-      questionIndex?: number;
-    }
-  | { type: 'questions-meta' | 'completion-meta' | 'error'; content?: string };
 // Types for enhanced thinking state
 interface ThinkingState {
   isThinking: boolean;
   message: string;
   stepType?: string;
   toolName?: string;
-  progress?: number;
+  status?: string;
 }
 
-interface ToolProgress {
+export interface ToolProgress {
   toolName: string;
-  progress: number;
+  progress?: number;
   message: string;
+  type?: string;
+}
+
+interface GeneratedQuestion {
+  content: string;
+  type: 'custom' | 'template';
+  index: number;
 }
 
 export function Chat({
@@ -87,7 +72,7 @@ export function Chat({
     Record<string, ToolProgress>
   >({});
   const [generatedQuestions, setGeneratedQuestions] = useState<
-    Array<{ content: string; type: 'custom' | 'template'; index: number }>
+    Array<GeneratedQuestion>
   >([]);
 
   const { visibilityType } = useChatVisibility({
@@ -107,7 +92,6 @@ export function Chat({
     reload,
     experimental_resume,
     data,
-    setData,
   } = useChat({
     id,
     initialMessages,
@@ -121,13 +105,11 @@ export function Chat({
       selectedChatModel: initialChatModel,
       selectedVisibilityType: visibilityType,
     }),
-
     onFinish: () => {
       mutate(unstable_serialize(getChatHistoryPaginationKey));
       // Reset thinking state when finished
       setThinkingState({ isThinking: false, message: '' });
       setToolProgress({});
-      setToolCall(undefined);
       setGeneratedQuestions([]);
     },
     onToolCall({ toolCall }) {
@@ -140,14 +122,107 @@ export function Chat({
           description: error.message,
         });
       }
+      // Reset thinking state on error
       setThinkingState({ isThinking: false, message: '' });
     },
   });
 
+  // Handle data stream updates using the data array and useEffect
+  useEffect(() => {
+    if (!data || data.length === 0) return;
+
+    // Process the latest data part
+    const latestData = data[data.length - 1];
+
+    if (!latestData || typeof latestData !== 'object') return;
+
+    console.log('Received data part:', latestData);
+
+    // Type guard to ensure we have the expected structure
+    const dataPart = latestData as {
+      type?: string;
+      data?: any;
+      content?: string;
+    };
+
+    switch (dataPart.type) {
+      case 'thinking-start':
+        setThinkingState({
+          isThinking: true,
+          message: dataPart.content || 'Starting analysis...',
+          status: 'start',
+        });
+        break;
+      case 'thinking-update':
+        setThinkingState({
+          isThinking: true,
+          message: dataPart.content || 'Processing',
+          status: 'update',
+        });
+        break;
+      case 'thinking-end':
+        setThinkingState((prev) => ({
+          ...prev,
+          isThinking: false,
+          message: dataPart.content || 'Complete',
+          status: 'end',
+        }));
+        break;
+
+      case 'tool-progress':
+        // biome-ignore lint/correctness/noSwitchDeclarations: <explanation>
+        const progressData = dataPart.data as any;
+
+        if (progressData?.type === 'tool-progress') {
+          setToolProgress((prev) => ({
+            ...prev,
+            [progressData.toolName]: {
+              toolName: progressData.toolName,
+              progress: progressData.progress || 0,
+              message: progressData.content || 'Processing...',
+              type: progressData.type,
+            },
+          }));
+        } else if (progressData?.type === 'question-generated') {
+          setGeneratedQuestions((prev) => [
+            ...prev,
+            {
+              content: progressData.content,
+              type: progressData.questionType || 'custom',
+              index: progressData.questionIndex || prev.length,
+            },
+          ]);
+        }
+        break;
+
+      case 'completion-meta':
+        try {
+          const meta = dataPart.data as any;
+          console.log('Completion metadata:', meta);
+        } catch (e) {
+          console.warn('Failed to parse completion metadata:', e);
+        }
+        break;
+
+      case 'error':
+        // biome-ignore lint/correctness/noSwitchDeclarations: <explanation>
+        const errorData = dataPart.data as any;
+        toast({
+          type: 'error',
+          description: errorData?.message || 'An error occurred',
+        });
+        setThinkingState({ isThinking: false, message: '' });
+        break;
+
+      default:
+        // Handle any other data stream types
+        console.log('Unhandled stream data type:', dataPart.type, dataPart);
+    }
+  }, [data]); // Watch for changes to the data array
+
   const searchParams = useSearchParams();
   const query = searchParams.get('query');
   const [hasAppendedQuery, setHasAppendedQuery] = useState(false);
-  const lastIdxRef = useRef(0);
 
   useEffect(() => {
     if (query && !hasAppendedQuery) {
@@ -168,75 +243,7 @@ export function Chat({
 
   const [attachments, setAttachments] = useState<Array<Attachment>>([]);
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
-  useEffect(() => {
-    console.log('USE EFFECT', data);
-    const arr = (data as StreamEvent[] | undefined) ?? [];
-    for (let i = lastIdxRef.current; i < arr.length; i++) {
-      const evt = arr[i];
-      switch (evt.type) {
-        case 'thinking-start':
-          setThinkingState({
-            isThinking: true,
-            message: evt.content ?? 'Starting analysis...',
-          });
-          break;
-        case 'thinking-update':
-          setThinkingState((prev) => ({
-            ...prev,
-            isThinking: true,
-            message: evt.content ?? 'Processing...',
-            stepType: evt.stepType,
-            toolName: evt.toolName,
-          }));
-          break;
-        case 'thinking-end':
-          setThinkingState((prev) => ({
-            ...prev,
-            isThinking: false,
-            message: evt.content ?? 'Complete',
-          }));
-          setTimeout(
-            () => setThinkingState({ isThinking: false, message: '' }),
-            1000,
-          );
-          break;
-        case 'tool-progress':
-          setToolProgress((prev) => ({
-            ...prev,
-            [evt.toolName]: {
-              toolName: evt.toolName,
-              progress: evt.progress ?? 0,
-              message: evt.content ?? 'Processing...',
-            },
-          }));
-          break;
-        case 'question-generated':
-          setGeneratedQuestions((prev) => [
-            ...prev,
-            {
-              content: evt.content,
-              type: evt.questionType ?? 'custom',
-              index: evt.questionIndex ?? prev.length,
-            },
-          ]);
-          break;
-        case 'questions-meta':
-        case 'completion-meta':
-          try {
-            console.log('meta:', JSON.parse(evt.content ?? 'null'));
-          } catch {}
-          break;
-        case 'error':
-          toast({
-            type: 'error',
-            description: evt.content ?? 'An error occurred',
-          });
-          setThinkingState({ isThinking: false, message: '' });
-          break;
-      }
-    }
-    lastIdxRef.current = arr.length;
-  }, [data]);
+
   useAutoResume({
     autoResume,
     initialMessages,
@@ -264,8 +271,9 @@ export function Chat({
   const enhancedThinkingInfo = useMemo(() => {
     if (!thinkingState.isThinking && !currentToolCall) return undefined;
 
-    const currentProgress = currentToolCall
-      ? toolProgress[currentToolCall]
+    // Get progress for current tool if available
+    const currentProgress = thinkingState.toolName
+      ? toolProgress[thinkingState.toolName]
       : undefined;
 
     return {
@@ -274,6 +282,7 @@ export function Chat({
       progress: currentProgress?.progress,
       stepType: thinkingState.stepType,
       isThinking: thinkingState.isThinking || status === 'submitted',
+      status: thinkingState.status,
     };
   }, [thinkingState, currentToolCall, toolProgress, status]);
 
@@ -289,6 +298,7 @@ export function Chat({
           isReadonly={isReadonly}
           session={session}
         />
+
         <Messages
           chatId={id}
           status={status}
@@ -300,6 +310,7 @@ export function Chat({
           isArtifactVisible={isArtifactVisible}
           enhancedThinkingInfo={enhancedThinkingInfo}
           generatedQuestions={generatedQuestions}
+          toolProgress={toolProgress}
         />
 
         <form className="flex mx-auto px-4 bg-background pb-4 md:pb-6 gap-2 w-full md:max-w-3xl">

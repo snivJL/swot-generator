@@ -20,53 +20,95 @@ import { MessageReasoning } from './message-reasoning';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import { DownloadLink } from './download-link';
 import Image from 'next/image';
-import { EnhancedThinkingMessage } from './thinking-message';
-import type { EnhancedThinkingInfo } from './messages';
+
 interface GeneratedQuestion {
   content: string;
   type: 'custom' | 'template';
   index: number;
 }
 
+interface ToolProgress {
+  toolName: string;
+  progress?: number;
+  message: string;
+  type?: string;
+}
+
+interface ThinkingInfo {
+  currentToolCall?: string;
+  message: string;
+  progress?: number;
+  stepType?: string;
+  isThinking: boolean;
+  status?: string;
+}
+
+// Component to display thinking state
+const ThinkingIndicator = ({
+  thinkingInfo,
+}: { thinkingInfo: ThinkingInfo }) => {
+  // if (!thinkingInfo.isThinking) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      className="bg-muted/30 rounded-lg p-3 mb-3"
+    >
+      <div className="flex items-center gap-2">
+        <div className="size-2 bg-blue-500 rounded-full animate-pulse" />
+        <span className="text-sm text-muted-foreground font-medium">
+          {thinkingInfo.message}
+        </span>
+        {thinkingInfo.currentToolCall && (
+          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+            {thinkingInfo.currentToolCall}
+          </span>
+        )}
+      </div>
+
+      {thinkingInfo.progress !== undefined && thinkingInfo.progress > 0 && (
+        <div className="mt-2">
+          <div className="w-full bg-gray-200 rounded-full h-1.5">
+            <div
+              className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
+              style={{ width: `${Math.min(100, thinkingInfo.progress)}%` }}
+            />
+          </div>
+        </div>
+      )}
+    </motion.div>
+  );
+};
+
 const PurePreviewMessage = ({
   chatId,
   message,
   vote,
   isLoading,
-  status,
-  generatedQuestions,
   setMessages,
   reload,
   isReadonly,
   requiresScrollPadding,
-  showThinking,
-  enhancedThinkingInfo,
+  generatedQuestions,
+  thinkingInfo,
+  toolProgress,
 }: {
   chatId: string;
   message: UIMessage;
   vote: Vote | undefined;
   isLoading: boolean;
-  status: UseChatHelpers['status'];
   setMessages: UseChatHelpers['setMessages'];
   reload: UseChatHelpers['reload'];
   isReadonly: boolean;
-  generatedQuestions?: Array<GeneratedQuestion>;
   requiresScrollPadding: boolean;
-  enhancedThinkingInfo?: EnhancedThinkingInfo;
-  showThinking: boolean;
+  generatedQuestions?: Array<GeneratedQuestion>;
+  thinkingInfo?: ThinkingInfo;
+  toolProgress?: Record<string, ToolProgress>;
 }) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
 
-  if (showThinking) {
-    return (
-      <EnhancedThinkingMessage
-        currentToolCall={enhancedThinkingInfo?.currentToolCall}
-        message={enhancedThinkingInfo?.message}
-        progress={enhancedThinkingInfo?.progress}
-        stepType={enhancedThinkingInfo?.stepType}
-      />
-    );
-  }
   return (
     <AnimatePresence>
       <motion.div
@@ -102,6 +144,10 @@ const PurePreviewMessage = ({
               'min-h-96': message.role === 'assistant' && requiresScrollPadding,
             })}
           >
+            {message.role === 'assistant' && thinkingInfo && (
+              <ThinkingIndicator thinkingInfo={thinkingInfo} />
+            )}
+
             {message.parts?.map((part, index) => {
               const { type } = part;
               const key = `message-${message.id}-part-${index}`;
@@ -175,6 +221,9 @@ const PurePreviewMessage = ({
                 if (state === 'call') {
                   const { args } = toolInvocation;
 
+                  // Get progress for current tool if available
+                  const currentProgress = toolProgress?.[toolName];
+
                   return (
                     <div
                       key={toolCallId}
@@ -198,36 +247,6 @@ const PurePreviewMessage = ({
                           args={args}
                           isReadonly={isReadonly}
                         />
-                      ) : toolName === 'generateQuestions' ? (
-                        <div className="bg-muted/50 rounded-lg p-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="size-2 bg-blue-500 rounded-full animate-pulse" />
-                            <span className="text-sm text-muted-foreground font-medium">
-                              Generating questions...
-                            </span>
-                          </div>
-                          {generatedQuestions &&
-                            generatedQuestions.length > 0 && (
-                              <div className="space-y-2 mt-3">
-                                {generatedQuestions.map((q) => (
-                                  <motion.div
-                                    key={`${q.index}-${q.type}`}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.3 }}
-                                    className={cn(
-                                      'p-2 rounded text-sm border-l-2',
-                                      q.type === 'custom'
-                                        ? 'border-blue-500 bg-blue-500/10'
-                                        : 'border-green-500 bg-green-500/10',
-                                    )}
-                                  >
-                                    {q.content}
-                                  </motion.div>
-                                ))}
-                              </div>
-                            )}
-                        </div>
                       ) : null}
                     </div>
                   );
@@ -298,11 +317,14 @@ export const PreviewMessage = memo(
   (prevProps, nextProps) => {
     if (prevProps.isLoading !== nextProps.isLoading) return false;
     if (prevProps.message.id !== nextProps.message.id) return false;
-    if (prevProps.showThinking !== nextProps.showThinking) return false;
     if (prevProps.requiresScrollPadding !== nextProps.requiresScrollPadding)
       return false;
     if (!equal(prevProps.message.parts, nextProps.message.parts)) return false;
     if (!equal(prevProps.vote, nextProps.vote)) return false;
+    if (!equal(prevProps.generatedQuestions, nextProps.generatedQuestions))
+      return false;
+    if (!equal(prevProps.thinkingInfo, nextProps.thinkingInfo)) return false;
+    if (!equal(prevProps.toolProgress, nextProps.toolProgress)) return false;
 
     return true;
   },

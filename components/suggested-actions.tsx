@@ -37,28 +37,26 @@ interface SuggestedActionsProps {
 
 const actionCategories: ActionCategory[] = [
   {
-    id: 'screening',
-    name: 'Screening & Initial',
+    id: 'overview',
+    name: 'Overview',
     icon: Search,
     color: 'from-blue-500 to-cyan-500',
     actions: [
       {
-        question: "Explain the company's business model in simple terms",
-        action: "Explain the company's business model in simple terms.",
+        question: 'Explain the business model in simple terms',
+        action: 'Explain the business model in simple terms.',
       },
       {
-        question: 'Summarize the founding team and their relevant experience',
-        action: 'Summarize the founding team and their relevant experience.',
+        question: 'Describe the founding team and their relevant experience',
+        action: 'Describe the founding team and their relevant experience.',
       },
       {
-        question: 'Give me the key financials for the last 2 years',
-        action: 'Give me the key financials for the last 2 years.',
+        question: 'Summarize key financials, including ARR, growth rate, EBIT',
+        action: 'Summarize key financials, including ARR, growth rate, EBIT.',
       },
       {
-        question:
-          'What are the strengths, weaknesses, opportunities and risks flagged?',
-        action:
-          'What are the strengths, weaknesses, opportunities and risks flagged in the documents?',
+        question: 'Conduct a SWOT analysis',
+        action: 'Conduct a SWOT analysis?',
       },
     ],
   },

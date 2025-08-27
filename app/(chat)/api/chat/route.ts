@@ -130,8 +130,7 @@ export async function POST(request: Request) {
         // Send initial thinking state
         const hasAttachedDocument = messages.some(
           (message) =>
-            message.role === 'assistant' &&
-            message.experimental_attachments?.length,
+            message.role === 'user' && message.experimental_attachments?.length,
         );
         dataStream.writeData({
           type: 'thinking-start',
@@ -245,7 +244,6 @@ export async function POST(request: Request) {
           },
 
           onFinish: async ({ response, usage, finishReason }) => {
-            // Send thinking complete
             dataStream.writeData({
               type: 'thinking-end',
               content: 'Analysis complete',

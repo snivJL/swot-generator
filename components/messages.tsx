@@ -1,5 +1,3 @@
-'use client';
-
 import type { UIMessage } from 'ai';
 import { PreviewMessage } from './message';
 import { Greeting } from './greeting';
@@ -9,13 +7,15 @@ import equal from 'fast-deep-equal';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import { motion } from 'framer-motion';
 import { useMessages } from '@/hooks/use-messages';
-
-export interface EnhancedThinkingInfo {
+import { EnhancedThinkingMessage } from './thinking-message';
+import type { ToolProgress } from './chat';
+interface EnhancedThinkingInfo {
   currentToolCall?: string;
   message: string;
   progress?: number;
   stepType?: string;
   isThinking: boolean;
+  status?: string;
 }
 
 interface GeneratedQuestion {
@@ -35,6 +35,7 @@ interface MessagesProps {
   isArtifactVisible: boolean;
   enhancedThinkingInfo?: EnhancedThinkingInfo;
   generatedQuestions?: Array<GeneratedQuestion>;
+  toolProgress?: Record<string, ToolProgress>;
 }
 
 function PureMessages({
@@ -47,6 +48,7 @@ function PureMessages({
   isReadonly,
   enhancedThinkingInfo,
   generatedQuestions,
+  toolProgress,
 }: MessagesProps) {
   const {
     containerRef: messagesContainerRef,
@@ -67,35 +69,57 @@ function PureMessages({
       {messages.length === 0 && <Greeting />}
 
       {messages.map((message, index) => {
-        const isLoadingMessage =
-          status === 'streaming' && messages.length - 1 === index;
+        const isLastMessage = index === messages.length - 1;
+        const isLastAssistantMessage =
+          message.role === 'assistant' && isLastMessage;
+        const isStreamingToThisMessage =
+          status === 'streaming' && isLastMessage;
+
+        // Only show thinking info on the last assistant message when streaming
+        const shouldShowThinking =
+          isLastAssistantMessage &&
+          (isStreamingToThisMessage || enhancedThinkingInfo?.isThinking);
 
         return (
-          <>
-            <PreviewMessage
-              key={message.id}
-              chatId={chatId}
-              message={message}
-              status={status}
-              isLoading={isLoadingMessage}
-              showThinking={isLoadingMessage}
-              vote={
-                votes
-                  ? votes.find((vote) => vote.messageId === message.id)
-                  : undefined
-              }
-              setMessages={setMessages}
-              reload={reload}
-              isReadonly={isReadonly}
-              requiresScrollPadding={
-                hasSentMessage && index === messages.length - 1
-              }
-              enhancedThinkingInfo={enhancedThinkingInfo}
-              generatedQuestions={generatedQuestions}
-            />
-          </>
+          <PreviewMessage
+            key={message.id}
+            chatId={chatId}
+            message={message}
+            isLoading={isStreamingToThisMessage}
+            vote={votes?.find((vote) => vote.messageId === message.id)}
+            setMessages={setMessages}
+            reload={reload}
+            isReadonly={isReadonly}
+            thinkingInfo={shouldShowThinking ? enhancedThinkingInfo : undefined}
+            requiresScrollPadding={hasSentMessage && isLastMessage}
+            generatedQuestions={generatedQuestions}
+            toolProgress={toolProgress}
+          />
         );
       })}
+      {(status === 'submitted' || enhancedThinkingInfo?.isThinking) &&
+        messages.length > 0 &&
+        messages[messages.length - 1].role === 'user' && (
+          <div className="w-full mx-auto max-w-3xl px-4">
+            <EnhancedThinkingMessage
+              currentToolCall={enhancedThinkingInfo?.currentToolCall}
+              message={enhancedThinkingInfo?.message}
+              progress={enhancedThinkingInfo?.progress}
+              stepType={enhancedThinkingInfo?.stepType}
+            />
+          </div>
+        )}
+      {/* Enhanced thinking message with progress and detailed feedback */}
+      {/* {(status === 'submitted' || enhancedThinkingInfo?.isThinking) &&
+        messages.length > 0 &&
+        messages[messages.length - 1].role === 'user' && (
+          <EnhancedThinkingMessage
+            currentToolCall={enhancedThinkingInfo?.currentToolCall}
+            message={enhancedThinkingInfo?.message}
+            progress={enhancedThinkingInfo?.progress}
+            stepType={enhancedThinkingInfo?.stepType}
+          />
+        )} */}
 
       <motion.div
         ref={messagesEndRef}
@@ -117,6 +141,7 @@ export const Messages = memo(PureMessages, (prevProps, nextProps) => {
   if (!equal(prevProps.votes, nextProps.votes)) return false;
   if (!equal(prevProps.enhancedThinkingInfo, nextProps.enhancedThinkingInfo))
     return false;
+  if (!equal(prevProps.toolProgress, nextProps.toolProgress)) return false;
   if (!equal(prevProps.generatedQuestions, nextProps.generatedQuestions))
     return false;
 
