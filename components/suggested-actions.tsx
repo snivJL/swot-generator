@@ -88,7 +88,7 @@ const actionCategories: ActionCategory[] = [
   },
   {
     id: 'financial',
-    name: 'Due diligence',
+    name: 'Due-diligence',
     icon: Shield,
     color: 'from-red-500 to-orange-500',
     actions: [
