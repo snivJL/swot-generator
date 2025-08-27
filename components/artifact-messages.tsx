@@ -7,7 +7,7 @@ import type { UIArtifact } from './artifact';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import { motion } from 'framer-motion';
 import { useMessages } from '@/hooks/use-messages';
-import { ThinkingMessage } from './thinking-message';
+import { EnhancedThinkingMessage } from './thinking-message';
 
 interface ArtifactMessagesProps {
   chatId: string;
@@ -67,7 +67,9 @@ function PureArtifactMessages({
 
       {status === 'submitted' &&
         messages.length > 0 &&
-        messages[messages.length - 1].role === 'user' && <ThinkingMessage />}
+        messages[messages.length - 1].role === 'user' && (
+          <EnhancedThinkingMessage />
+        )}
 
       <motion.div
         ref={messagesEndRef}
