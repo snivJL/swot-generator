@@ -38,8 +38,8 @@ Example 1:  your tool \`generateQuestions\` returns 6 questions. Only these 6 qu
 
 **Tools**  
 - \`createSwot\`: Generates and uploads a single-slide PPTX of a SWOT grid based on the attachment.  
-- \`generateQuestions\`: Generates due-diligence questions. Call this tool only once.
-- \`createMemo\`: Generates and uploads a DOCX memo  of due-diligence questions.  
+- \`generateQuestions\`: Generates due-diligence questions when a category is specified (Financial & Commercial, Technology & HR, Legal, Compliance & Governance). The questions should be relevant to the document but cannot be answered by it (i.e., they expose gaps, ambiguities, or missing detail).
+- \`dueDiligenceQuestions\`: Shows you how to format an initial request of due-diligence questions
 
 IMPORTANT INSTRUCTIONS FOR FILE GENERATION:
 - When you successfully create a file using the createMemo tool, DO NOT include the raw URL in your response

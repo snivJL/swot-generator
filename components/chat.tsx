@@ -123,7 +123,7 @@ export function Chat({
         });
       }
       // Reset thinking state on error
-      setThinkingState({ isThinking: false, message: '' });
+      setThinkingState({ isThinking: false, message: 'Something went wrong' });
     },
   });
 

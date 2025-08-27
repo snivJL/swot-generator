@@ -31,6 +31,7 @@ import { differenceInSeconds } from 'date-fns';
 import { ChatSDKError } from '@/lib/errors';
 import { createSwot } from '@/lib/ai/tools/create-swot';
 import { generateQuestions } from '@/lib/ai/tools/generate-questions';
+import { dueDiligenceQuestions } from '@/lib/ai/tools/format-memo';
 
 export const maxDuration = 60;
 
@@ -138,7 +139,12 @@ export async function POST(request: Request) {
           system: systemPrompt({ selectedChatModel }),
           messages,
           maxSteps: 5,
-          experimental_activeTools: ['createSwot', 'generateQuestions'],
+          experimental_activeTools: [
+            'createSwot',
+            'generateQuestions',
+            // 'createMemo',
+            'dueDiligenceQuestions',
+          ],
           experimental_transform: smoothStream({
             chunking: 'word',
             delayInMs: 20,
@@ -147,6 +153,8 @@ export async function POST(request: Request) {
           tools: {
             createSwot: createSwot({ dataStream }),
             generateQuestions: generateQuestions({ dataStream }),
+            // createMemo: createMemo({ dataStream }),
+            dueDiligenceQuestions: dueDiligenceQuestions({ dataStream }),
           },
 
           onStepFinish({ text, toolCalls, toolResults, finishReason, usage }) {

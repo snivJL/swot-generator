@@ -214,7 +214,7 @@ const PurePreviewMessage = ({
                             message.role === 'user',
                         })}
                       >
-                        <Markdown>{`${sanitizeText(part.text)}\n`}</Markdown>
+                        <Markdown>{sanitizeText(part.text)}</Markdown>
                       </div>
                     </div>
                   );
@@ -243,9 +243,6 @@ const PurePreviewMessage = ({
 
                 if (state === 'call') {
                   const { args } = toolInvocation;
-
-                  // Get progress for current tool if available
-                  const currentProgress = toolProgress?.[toolName];
 
                   return (
                     <div

@@ -93,28 +93,21 @@ const actionCategories: ActionCategory[] = [
     color: 'from-red-500 to-orange-500',
     actions: [
       {
-        question:
-          'Write a list of Financial & Unit Economics due diligence questions',
-        action:
-          'Write a list of Financial & Unit Economics due diligence questions',
+        question: 'Write an initial due-diligence request',
+        action: 'Write an initial due-diligence request',
+      },
+      {
+        question: 'Write Financial & Commercial due-diligence request',
+        action: 'Write Financial & Commercial due-diligence request',
+      },
+      {
+        question: 'Write a Technology & HR due-diligence request',
+        action: 'Write a Technology & HR due-diligence request',
       },
       {
         question:
-          'Write a list of Market, Customers & Growth due diligence questions',
-        action:
-          'Write a list of Market, Customers & Growth due diligence questions',
-      },
-      {
-        question:
-          'Write a list of Operations, Technology & People due diligence questions',
-        action:
-          'Write a list of Operations, Technology & People due diligence questions',
-      },
-      {
-        question:
-          'Write a list of Legal, Compliance & Governance due diligence questions',
-        action:
-          'Write a list of Legal, Compliance & Governance due diligence questions',
+          'Write a Legal, Compliance & Governance due-diligence request',
+        action: 'Write a Legal, Compliance & Governance due-diligence request',
       },
     ],
   },

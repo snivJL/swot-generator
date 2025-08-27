@@ -1,21 +1,17 @@
-import { tool } from 'ai';
+import { type DataStreamWriter, tool } from 'ai';
 import { z } from 'zod';
+interface FormatMemoProps {
+  dataStream: DataStreamWriter;
+}
 
-export const formatMemo = tool({
-  description:
-    'Use this tool when the user asks to generate due diligence follow-up questions to get the desired output format',
-  parameters: z.object({}),
-  execute: async () => {
-    return `
-<!-- IMPORTANT: ONLY output this in your final answer, do not add "Thank you for this information" or anything similar -->
-
-<!--
-SECTION: Questions for Investors  
-- Total: 15 questions divided into 5 themes.  
-- Each theme is a \`###\` subheading followed by a letter, a title, and 3 numbered questions.
--->
-
-## Questions for Investors
+export const dueDiligenceQuestions = ({ dataStream }: FormatMemoProps) =>
+  tool({
+    description:
+      'Use this tool when the user asks to write an initial due-diligence request to get the desired output format',
+    parameters: z.object({}),
+    execute: async () => {
+      return `
+## Initial due-diligence request
 
 ### A. Business Model  
 1. …  
@@ -41,7 +37,6 @@ SECTION: Questions for Investors
 1. …  
 2. …  
 3. …  
-
-Would you like to download these questions as a Word document (DOCX)? I can generate it for you.`;
-  },
-});
+`;
+    },
+  });
