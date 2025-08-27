@@ -158,66 +158,66 @@ export async function POST(request: Request) {
           },
 
           onStepFinish({ text, toolCalls, toolResults, finishReason, usage }) {
-            console.groupCollapsed(
-              '%c✨ Step Finished',
-              'color: #0A6AE7; font-weight: bold; font-size: 12px;',
-            );
-            console.log('%cText:', 'font-weight: bold;', text);
+            // console.groupCollapsed(
+            //   '%c✨ Step Finished',
+            //   'color: #0A6AE7; font-weight: bold; font-size: 12px;',
+            // );
+            // console.log('%cText:', 'font-weight: bold;', text);
 
             // Send immediate feedback when tool calls are detected
-            if (Array.isArray(toolCalls) && toolCalls.length) {
-              console.groupCollapsed('🔧 Tool Calls');
-              toolCalls.forEach((call, i) => {
-                console.groupCollapsed(`Call ${i} – ${call.toolName}`);
-                console.log('%cType:', 'font-weight:bold;', call.type);
-                console.log(
-                  '%ctoolCallId:',
-                  'font-weight:bold;',
-                  call.toolCallId,
-                );
-                console.log('Args (JSON):', JSON.stringify(call.args, null, 2));
+            // if (Array.isArray(toolCalls) && toolCalls.length) {
+            //   console.groupCollapsed('🔧 Tool Calls');
+            //   toolCalls.forEach((call, i) => {
+            //     console.groupCollapsed(`Call ${i} – ${call.toolName}`);
+            //     console.log('%cType:', 'font-weight:bold;', call.type);
+            //     console.log(
+            //       '%ctoolCallId:',
+            //       'font-weight:bold;',
+            //       call.toolCallId,
+            //     );
+            //     console.log('Args (JSON):', JSON.stringify(call.args, null, 2));
 
-                // Send tool starting feedback when we detect the call
-                const toolFeedback = getToolFeedback(call.toolName);
-                dataStream.writeData({
-                  type: 'thinking-update',
-                  content: toolFeedback.starting,
-                  stepType: 'tool-call',
-                  toolName: call.toolName,
-                });
+            //     // Send tool starting feedback when we detect the call
+            //     // const toolFeedback = getToolFeedback(call.toolName);
+            //     // dataStream.writeData({
+            //     //   type: 'thinking-update',
+            //     //   content: toolFeedback.starting,
+            //     //   stepType: 'tool-call',
+            //     //   toolName: call.toolName,
+            //     // });
 
-                console.groupEnd();
-              });
-              console.groupEnd();
-            }
+            //     console.groupEnd();
+            //   });
+            //   console.groupEnd();
+            // }
 
-            // Tool results feedback
-            if (Array.isArray(toolResults) && toolResults.length) {
-              console.groupCollapsed('📥 Tool Results');
-              toolResults.forEach((res, i) => {
-                console.groupCollapsed(`Result ${i} – ${res.toolName}`);
-                console.log('%cType:', 'font-weight:bold;', res.type);
-                console.log(
-                  '%ctoolCallId:',
-                  'font-weight:bold;',
-                  res.toolCallId,
-                );
-                console.log('%cArgs:', 'font-weight:bold;', res.args);
-                console.dir(res.result, { depth: null });
+            // // Tool results feedback
+            // if (Array.isArray(toolResults) && toolResults.length) {
+            //   console.groupCollapsed('📥 Tool Results');
+            //   toolResults.forEach((res, i) => {
+            //     console.groupCollapsed(`Result ${i} – ${res.toolName}`);
+            //     console.log('%cType:', 'font-weight:bold;', res.type);
+            //     console.log(
+            //       '%ctoolCallId:',
+            //       'font-weight:bold;',
+            //       res.toolCallId,
+            //     );
+            //     console.log('%cArgs:', 'font-weight:bold;', res.args);
+            //     console.dir(res.result, { depth: null });
 
-                // Send completion feedback
-                const toolFeedback = getToolFeedback(res.toolName);
-                dataStream.writeData({
-                  type: 'thinking-update',
-                  content: toolFeedback.completed,
-                  stepType: 'tool-result',
-                  toolName: res.toolName,
-                });
+            //     // Send completion feedback
+            //     const toolFeedback = getToolFeedback(res.toolName);
+            //     dataStream.writeData({
+            //       type: 'thinking-update',
+            //       content: toolFeedback.completed,
+            //       stepType: 'tool-result',
+            //       toolName: res.toolName,
+            //     });
 
-                console.groupEnd();
-              });
-              console.groupEnd();
-            }
+            //     console.groupEnd();
+            //   });
+            //   console.groupEnd();
+            // }
 
             if (finishReason === 'stop') {
               dataStream.writeData({
@@ -226,11 +226,11 @@ export async function POST(request: Request) {
                 stepType: 'completion',
               });
             } else if (finishReason === 'tool-calls') {
-              dataStream.writeData({
-                type: 'thinking-update',
-                content: 'Processing tool results...',
-                stepType: 'processing',
-              });
+              // dataStream.writeData({
+              //   type: 'thinking-update',
+              //   content: 'Processing tool results...',
+              //   stepType: 'processing',
+              // });
             } else if (text?.trim()) {
               dataStream.writeData({
                 type: 'thinking-update',
@@ -262,8 +262,6 @@ export async function POST(request: Request) {
                   messages: [message],
                   responseMessages: response.messages,
                 });
-
-                console.log('ASSISTANT MESSAGE', assistantMessage);
 
                 await saveMessages({
                   messages: [

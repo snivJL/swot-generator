@@ -1,6 +1,7 @@
 import { type DataStreamWriter, tool } from 'ai';
 import { z } from 'zod';
 import { generateUUID } from '@/lib/utils';
+import { Question } from './format-memo';
 
 interface CreateDocumentProps {
   dataStream: DataStreamWriter;
@@ -46,7 +47,7 @@ export const generateQuestions = ({ dataStream }: CreateDocumentProps) =>
         'legalComplianceAndGovernance',
       ]),
       generatedQuestions: z
-        .array(z.string())
+        .array(Question)
         .length(3)
         .describe(
           '3 additional concise questions where the answer is not addressed in the attachment',
@@ -141,6 +142,7 @@ export const generateQuestions = ({ dataStream }: CreateDocumentProps) =>
           totalCount: generatedQuestions.length + templateQuestions.length,
         }),
       });
+      console.log('HEEEEEEEEERE', templateQuestions, generatedQuestions);
 
       return {
         questionsFromTemplate: templateQuestions,
@@ -263,7 +265,7 @@ export const generateTemplateQuestions = ({
           totalCount: generatedQuestions.length + templateQuestions.length,
         }),
       });
-
+      console.log('HEEEEEEEEERE', templateQuestions, generatedQuestions);
       return {
         questionsFromTemplate: templateQuestions,
         generatedQuestions,

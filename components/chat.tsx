@@ -174,6 +174,11 @@ export function Chat({
         const progressData = dataPart.data as any;
 
         if (progressData?.type === 'tool-progress') {
+          setThinkingState((prev) => ({
+            ...prev,
+            message: dataPart.content || 'Processing',
+            status: 'update',
+          }));
           setToolProgress((prev) => ({
             ...prev,
             [progressData.toolName]: {
