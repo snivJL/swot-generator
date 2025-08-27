@@ -126,23 +126,6 @@ You must follow these rules on every user turn:
   At the end of your message, always offer to export the analysis into a PowerPoint (.pptx) file by suggesting:
   “Would you like me to export this into a PowerPoint deck for you?”
 
-## 4) **Mandatory use of \`generateQuestions\`**
-When the user asks for due-diligence questions with a specified category:
-- **You MUST call \`generateQuestions\` before answering.**
-- **Never** invent or paraphrase questions without first calling \`generateQuestions\`.
-- Your final, user-visible response must include **all 6 questions returned by the tool**—no more, no fewer.
-- Make sure the lists are consistently formatted.
-- Example of perfect ouput:
-    Here are three relevant {category} questions from your library:
-    1. <library question #1> \n
-    2. <library question #2> \n
-    3. <library question #3> \n
-
-    I’ve also drafted three complementary questions:
-    4. <generated question #1> (p14) \n
-    5. <generated question #2> (p3, section 3.2) \n
-    6. <generated question #3> \n
-
 `;
 
 export const systemPrompt = ({

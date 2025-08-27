@@ -129,7 +129,7 @@ const PurePreviewMessage = ({
   toolProgress?: Record<string, ToolProgress>;
 }) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
-
+  console.log(message);
   return (
     <AnimatePresence>
       <motion.div
