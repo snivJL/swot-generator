@@ -1,11 +1,211 @@
 import { type DataStreamWriter, tool } from 'ai';
 import { z } from 'zod';
 import { generateUUID } from '@/lib/utils';
-import { Question } from './format-memo';
 
 interface CreateDocumentProps {
   dataStream: DataStreamWriter;
 }
+
+export const generateQuestions = ({ dataStream }: CreateDocumentProps) =>
+  tool({
+    description: `
+      Analyze the provided document and generate 6 total due diligence questions:
+      - 3 questions selected from the template library 
+      - 3 custom generated questions
+      
+      All questions must be relevant to the document content but cannot be directly answered by it.
+      They should expose gaps, ambiguities, or missing details that require additional investigation.
+      Cite the page where the lack of information is observed.
+      
+      Available template questions by category:
+      
+      Financial & Unit Economics:
+      ${questionsFromTemplate.financialAndUnitEconomics.map((q, i) => `${i + 1}. ${q}`).join('\n')}
+      
+      Technology & HR:
+      ${questionsFromTemplate.technologyAndHR.map((q, i) => `${i + 1}. ${q}`).join('\n')}
+      
+      Legal, Compliance & Governance:
+      ${questionsFromTemplate.legalComplianceAndGovernance.map((q, i) => `${i + 1}. ${q}`).join('\n')}
+    `,
+    parameters: z.object({
+      title: z.string(),
+      selectedTemplateQuestions: z
+        .array(
+          z.object({
+            question: z.string(),
+            category: z.enum([
+              'financialAndUnitEconomics',
+              'technologyAndHR',
+              'legalComplianceAndGovernance',
+            ]),
+            reasoning: z
+              .string()
+              .describe(
+                'Why this template question is relevant but not answered in the document',
+              ),
+          }),
+        )
+        .length(3)
+        .describe(
+          '3 most relevant template questions that expose gaps in the document',
+        ),
+      generatedQuestions: z
+        .array(
+          z.object({
+            question: z.string(),
+            category: z.enum([
+              'financialAndUnitEconomics',
+              'technologyAndHR',
+              'legalComplianceAndGovernance',
+            ]),
+            reasoning: z
+              .string()
+              .describe(
+                'Why this custom question exposes missing information in the document',
+              ),
+          }),
+        )
+        .length(3)
+        .describe(
+          '3 additional custom questions where the answer is not addressed in the document',
+        ),
+    }),
+
+    execute: async ({
+      title,
+      selectedTemplateQuestions,
+      generatedQuestions,
+    }) => {
+      const id = generateUUID();
+
+      dataStream.writeData({
+        type: 'tool-progress',
+        content: 'Setting up question framework...',
+        toolName: 'generateQuestions',
+        progress: 0,
+      });
+
+      dataStream.writeData({
+        type: 'id',
+        content: id,
+      });
+
+      dataStream.writeData({
+        type: 'tool-progress',
+        content: 'Analyzing document for relevant categories...',
+        toolName: 'generateQuestions',
+        progress: 15,
+      });
+
+      dataStream.writeData({
+        type: 'title',
+        content: title,
+      });
+
+      dataStream.writeData({
+        type: 'tool-progress',
+        content: 'Selecting most relevant template questions...',
+        toolName: 'generateQuestions',
+        progress: 40,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Stream template questions
+      selectedTemplateQuestions.forEach((questionObj, index) => {
+        dataStream.writeData({
+          type: 'question-generated',
+          content: {
+            question: questionObj.question,
+            category: questionObj.category,
+            reasoning: questionObj.reasoning,
+          },
+          questionIndex: index,
+          questionType: 'template',
+        });
+      });
+
+      dataStream.writeData({
+        type: 'tool-progress',
+        content: 'Generating custom questions for identified gaps...',
+        toolName: 'generateQuestions',
+        progress: 70,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      // Stream generated questions
+      generatedQuestions.forEach((questionObj, index) => {
+        dataStream.writeData({
+          type: 'question-generated',
+          content: {
+            question: questionObj.question,
+            category: questionObj.category,
+            reasoning: questionObj.reasoning,
+          },
+          questionIndex: index + selectedTemplateQuestions.length,
+          questionType: 'custom',
+        });
+      });
+
+      dataStream.writeData({
+        type: 'tool-progress',
+        content: 'Questions ready!',
+        toolName: 'generateQuestions',
+        progress: 100,
+      });
+
+      dataStream.writeData({
+        type: 'clear',
+        content: '',
+      });
+
+      // Calculate category distribution
+      const allQuestions = [
+        ...selectedTemplateQuestions,
+        ...generatedQuestions,
+      ];
+      const categoryDistribution = allQuestions.reduce(
+        (acc, q) => {
+          acc[q.category] = (acc[q.category] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
+
+      // Additional metadata for the frontend
+      dataStream.writeData({
+        type: 'questions-meta',
+        content: JSON.stringify({
+          categoryDistribution,
+          templateCount: selectedTemplateQuestions.length,
+          customCount: generatedQuestions.length,
+          totalCount: allQuestions.length,
+        }),
+      });
+
+      console.log('Selected template questions:', selectedTemplateQuestions);
+      console.log('Generated custom questions:', generatedQuestions);
+
+      return {
+        questionsFromTemplate: selectedTemplateQuestions.map((q) => q.question),
+        generatedQuestions: generatedQuestions.map((q) => ({
+          question: q.question,
+          category: q.category,
+          reasoning: q.reasoning,
+        })),
+        allQuestions: allQuestions,
+        metadata: {
+          categoryDistribution,
+          templateCount: selectedTemplateQuestions.length,
+          customCount: generatedQuestions.length,
+          totalQuestions: allQuestions.length,
+          processingTime: Date.now(),
+        },
+      };
+    },
+  });
 
 export const questionsFromTemplate = {
   financialAndUnitEconomics: [
@@ -34,246 +234,3 @@ export const questionsFromTemplate = {
     'What pending or historical litigation, claims, or contingent liabilities exist, and how is governance structured at the board and management levels?',
   ],
 } as const;
-
-export const generateQuestions = ({ dataStream }: CreateDocumentProps) =>
-  tool({
-    description:
-      'Use this tool when the user asks for due diligence questions with the following categories: Financial & Commercial, Technology & HR, Legal, Compliance & Governance. Only use the 6 questions in output for your response.',
-    parameters: z.object({
-      title: z.string(),
-      category: z.enum([
-        'financialAndUnitEconomics',
-        'technologyAndHR',
-        'legalComplianceAndGovernance',
-      ]),
-      generatedQuestions: z
-        .array(Question)
-        .length(3)
-        .describe(
-          '3 additional concise questions where the answer is not addressed in the attachment',
-        ),
-    }),
-
-    execute: async ({ title, category, generatedQuestions }) => {
-      const id = generateUUID();
-
-      dataStream.writeData({
-        type: 'tool-progress',
-        content: 'Setting up question framework...',
-        toolName: 'generateQuestions',
-        progress: 0,
-      });
-
-      dataStream.writeData({
-        type: 'id',
-        content: id,
-      });
-
-      dataStream.writeData({
-        type: 'tool-progress',
-        content: `Analyzing ${category
-          .replace(/([A-Z])/g, ' $1')
-          .toLowerCase()
-          .trim()} category...`,
-        toolName: 'generateQuestions',
-        progress: 25,
-      });
-
-      dataStream.writeData({
-        type: 'title',
-        content: title,
-      });
-
-      dataStream.writeData({
-        type: 'tool-progress',
-        content: 'Generating custom questions...',
-        toolName: 'generateQuestions',
-        progress: 50,
-      });
-
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      dataStream.writeData({
-        type: 'tool-progress',
-        content: 'Selecting template questions...',
-        toolName: 'generateQuestions',
-        progress: 75,
-      });
-
-      const templateQuestions = questionsFromTemplate[category];
-
-      generatedQuestions.forEach((question, index) => {
-        dataStream.writeData({
-          type: 'question-generated',
-          content: question,
-          questionIndex: index,
-          questionType: 'custom',
-        });
-      });
-
-      templateQuestions.forEach((question, index) => {
-        dataStream.writeData({
-          type: 'question-generated',
-          content: question,
-          questionIndex: index + generatedQuestions.length,
-          questionType: 'template',
-        });
-      });
-
-      dataStream.writeData({
-        type: 'tool-progress',
-        content: 'Questions ready!',
-        toolName: 'generateQuestions',
-        progress: 100,
-      });
-
-      dataStream.writeData({
-        type: 'clear',
-        content: '',
-      });
-
-      // Additional metadata for the frontend
-      dataStream.writeData({
-        type: 'questions-meta',
-        content: JSON.stringify({
-          category,
-          customCount: generatedQuestions.length,
-          templateCount: templateQuestions.length,
-          totalCount: generatedQuestions.length + templateQuestions.length,
-        }),
-      });
-      console.log('HEEEEEEEEERE', templateQuestions, generatedQuestions);
-
-      return {
-        questionsFromTemplate: templateQuestions,
-        generatedQuestions,
-        metadata: {
-          category,
-          totalQuestions: generatedQuestions.length + templateQuestions.length,
-          processingTime: Date.now(), // For potential analytics
-        },
-      };
-    },
-  });
-
-export const generateTemplateQuestions = ({
-  dataStream,
-}: CreateDocumentProps) =>
-  tool({
-    description:
-      'Use this tool to get 3 due diligence questions from the client library with the following categories: Financial & Commercial, Technology & HR, Legal, Compliance & Governance. Only use the 3 questions in output for your response.',
-    parameters: z.object({
-      title: z.string(),
-      category: z.enum([
-        'financialAndUnitEconomics',
-        'technologyAndHR',
-        'legalComplianceAndGovernance',
-      ]),
-      generatedQuestions: z
-        .array(z.string())
-        .length(3)
-        .describe(
-          '3 additional concise questions where the answer is not addressed in the attachment',
-        ),
-    }),
-
-    execute: async ({ title, category, generatedQuestions }) => {
-      const id = generateUUID();
-
-      dataStream.writeData({
-        type: 'tool-progress',
-        content: 'Setting up question framework...',
-        toolName: 'generateQuestions',
-        progress: 0,
-      });
-
-      dataStream.writeData({
-        type: 'id',
-        content: id,
-      });
-
-      dataStream.writeData({
-        type: 'tool-progress',
-        content: `Analyzing ${category
-          .replace(/([A-Z])/g, ' $1')
-          .toLowerCase()
-          .trim()} category...`,
-        toolName: 'generateQuestions',
-        progress: 25,
-      });
-
-      dataStream.writeData({
-        type: 'title',
-        content: title,
-      });
-
-      dataStream.writeData({
-        type: 'tool-progress',
-        content: 'Generating custom questions...',
-        toolName: 'generateQuestions',
-        progress: 50,
-      });
-
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      dataStream.writeData({
-        type: 'tool-progress',
-        content: 'Selecting template questions...',
-        toolName: 'generateQuestions',
-        progress: 75,
-      });
-
-      const templateQuestions = questionsFromTemplate[category];
-
-      generatedQuestions.forEach((question, index) => {
-        dataStream.writeData({
-          type: 'question-generated',
-          content: question,
-          questionIndex: index,
-          questionType: 'custom',
-        });
-      });
-
-      templateQuestions.forEach((question, index) => {
-        dataStream.writeData({
-          type: 'question-generated',
-          content: question,
-          questionIndex: index + generatedQuestions.length,
-          questionType: 'template',
-        });
-      });
-
-      dataStream.writeData({
-        type: 'tool-progress',
-        content: 'Questions ready!',
-        toolName: 'generateQuestions',
-        progress: 100,
-      });
-
-      dataStream.writeData({
-        type: 'clear',
-        content: '',
-      });
-
-      // Additional metadata for the frontend
-      dataStream.writeData({
-        type: 'questions-meta',
-        content: JSON.stringify({
-          category,
-          customCount: generatedQuestions.length,
-          templateCount: templateQuestions.length,
-          totalCount: generatedQuestions.length + templateQuestions.length,
-        }),
-      });
-      console.log('HEEEEEEEEERE', templateQuestions, generatedQuestions);
-      return {
-        questionsFromTemplate: templateQuestions,
-        generatedQuestions,
-        metadata: {
-          category,
-          totalQuestions: generatedQuestions.length + templateQuestions.length,
-          processingTime: Date.now(), // For potential analytics
-        },
-      };
-    },
-  });
