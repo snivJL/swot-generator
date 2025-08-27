@@ -43,37 +43,58 @@ interface ThinkingInfo {
   status?: string;
 }
 
-// Component to display thinking state
 const ThinkingIndicator = ({
   thinkingInfo,
 }: { thinkingInfo: ThinkingInfo }) => {
-  // if (!thinkingInfo.isThinking) return null;
+  if (!thinkingInfo.isThinking) return null;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      className="bg-muted/30 rounded-lg p-3 mb-3"
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
+      className="border border-border/50 bg-muted/20 rounded-lg p-4 mb-4"
     >
-      <div className="flex items-center gap-2">
-        <div className="size-2 bg-blue-500 rounded-full animate-pulse" />
-        <span className="text-sm text-muted-foreground font-medium">
-          {thinkingInfo.message}
-        </span>
-        {thinkingInfo.currentToolCall && (
-          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-            {thinkingInfo.currentToolCall}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1">
+          <div
+            className="size-1 bg-foreground/40 rounded-full animate-pulse"
+            style={{ animationDelay: '0ms' }}
+          />
+          <div
+            className="size-1 bg-foreground/40 rounded-full animate-pulse"
+            style={{ animationDelay: '150ms' }}
+          />
+          <div
+            className="size-1 bg-foreground/40 rounded-full animate-pulse"
+            style={{ animationDelay: '300ms' }}
+          />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <span className="text-sm text-foreground/80 font-medium leading-tight">
+            {thinkingInfo.message}
           </span>
-        )}
+
+          {thinkingInfo.currentToolCall && (
+            <div className="mt-1">
+              <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-md border border-border/30">
+                {thinkingInfo.currentToolCall}
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
       {thinkingInfo.progress !== undefined && thinkingInfo.progress > 0 && (
-        <div className="mt-2">
-          <div className="w-full bg-gray-200 rounded-full h-1.5">
-            <div
-              className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
-              style={{ width: `${Math.min(100, thinkingInfo.progress)}%` }}
+        <div className="mt-3">
+          <div className="w-full bg-muted/50 rounded-full h-1 overflow-hidden">
+            <motion.div
+              className="bg-foreground/20 h-full rounded-full"
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min(100, thinkingInfo.progress)}%` }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
             />
           </div>
         </div>
@@ -116,6 +137,7 @@ const PurePreviewMessage = ({
         className="w-full mx-auto max-w-3xl px-4 group/message"
         initial={{ y: 5, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
         data-role={message.role}
       >
         <div
@@ -128,7 +150,7 @@ const PurePreviewMessage = ({
           )}
         >
           {message.role === 'assistant' && (
-            <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-background">
+            <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border/50 bg-background shadow-sm">
               <Image
                 src="/logo-sm.svg"
                 alt="kornelia logo"
@@ -172,7 +194,8 @@ const PurePreviewMessage = ({
                             <Button
                               data-testid="message-edit-button"
                               variant="ghost"
-                              className="px-2 h-fit rounded-full text-muted-foreground opacity-0 group-hover/message:opacity-100"
+                              size="sm"
+                              className="px-2 h-8 rounded-full text-muted-foreground/60 opacity-0 group-hover/message:opacity-100 hover:text-muted-foreground transition-all duration-200"
                               onClick={() => {
                                 setMode('edit');
                               }}
@@ -187,7 +210,7 @@ const PurePreviewMessage = ({
                       <div
                         data-testid="message-content"
                         className={cn('flex flex-col gap-4', {
-                          'bg-primary text-primary-foreground px-3 py-2 rounded-xl':
+                          'bg-primary text-primary-foreground px-4 py-3 rounded-2xl shadow-sm border border-primary/10':
                             message.role === 'user',
                         })}
                       >

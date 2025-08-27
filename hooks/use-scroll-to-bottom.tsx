@@ -1,3 +1,5 @@
+'use client';
+
 import useSWR from 'swr';
 import { useRef, useEffect, useCallback } from 'react';
 
@@ -10,7 +12,9 @@ export function useScrollToBottom() {
   const { data: isAtBottom = false, mutate: setIsAtBottom } = useSWR(
     'messages:is-at-bottom',
     null,
-    { fallbackData: false },
+    {
+      fallbackData: false,
+    },
   );
 
   const { data: scrollBehavior = false, mutate: setScrollBehavior } =

@@ -56,7 +56,7 @@ const actionCategories: ActionCategory[] = [
       },
       {
         question: 'Conduct a SWOT analysis',
-        action: 'Conduct a SWOT analysis?',
+        action: 'Conduct a SWOT analysis',
       },
     ],
   },

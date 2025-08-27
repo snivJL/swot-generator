@@ -1,3 +1,5 @@
+'use client';
+
 import type { UIMessage } from 'ai';
 import { PreviewMessage } from './message';
 import { Greeting } from './greeting';
@@ -59,6 +61,7 @@ function PureMessages({
   } = useMessages({
     chatId,
     status,
+    messages,
   });
 
   return (
@@ -97,6 +100,7 @@ function PureMessages({
           />
         );
       })}
+
       {(status === 'submitted' || enhancedThinkingInfo?.isThinking) &&
         messages.length > 0 &&
         messages[messages.length - 1].role === 'user' && (
@@ -109,17 +113,6 @@ function PureMessages({
             />
           </div>
         )}
-      {/* Enhanced thinking message with progress and detailed feedback */}
-      {/* {(status === 'submitted' || enhancedThinkingInfo?.isThinking) &&
-        messages.length > 0 &&
-        messages[messages.length - 1].role === 'user' && (
-          <EnhancedThinkingMessage
-            currentToolCall={enhancedThinkingInfo?.currentToolCall}
-            message={enhancedThinkingInfo?.message}
-            progress={enhancedThinkingInfo?.progress}
-            stepType={enhancedThinkingInfo?.stepType}
-          />
-        )} */}
 
       <motion.div
         ref={messagesEndRef}
