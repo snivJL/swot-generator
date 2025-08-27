@@ -15,8 +15,15 @@ export const Question = z
 
 export const dueDiligenceQuestions = ({ dataStream }: FormatMemoProps) =>
   tool({
-    description:
-      'Use this tool when the user asks to write an initial due-diligence request to get the desired output format. The questions should be relevant to the document but cannot be answered by it (i.e., they expose gaps, ambiguities, or missing detail). ONLY output this in your final answer, do not add "Thank you for this information" or anything similar',
+    description: `Use this tool when the user asks to write an initial due-diligence request.
+       All questions must be relevant to the document content but cannot be directly answered by it.
+      They should expose gaps, ambiguities, or missing details that require additional investigation.
+      Cite the page where the lack of information is observed.
+      <example>
+        What is the yearly growth rate?
+        (ARR progression is graphically depicted, but no explicit annual growth percentage is indicated – page 14.)  
+      </example>   
+      ONLY output this in your final answer, do not add "Thank you for this information" or anything similar`,
     parameters: z.object({
       businessModel: z
         .array(Question)

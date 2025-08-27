@@ -8,7 +8,7 @@ import { SessionProvider } from 'next-auth/react';
 
 export const metadata: Metadata = {
   // metadataBase: new URL('https://chat.vercel.ai'),
-  title: 'Kornelia',
+  title: 'KF Agent PE',
   description: 'Korefocus chatbot',
 };
 
