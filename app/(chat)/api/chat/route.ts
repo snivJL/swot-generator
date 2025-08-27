@@ -5,13 +5,12 @@ import {
   smoothStream,
   streamText,
 } from 'ai';
-import { auth, type UserType } from '@/app/(auth)/auth';
+import { auth } from '@/app/(auth)/auth';
 import { systemPrompt } from '@/lib/ai/prompts';
 import {
   createStreamId,
   deleteChatById,
   getChatById,
-  getMessageCountByUserId,
   getMessagesByChatId,
   getStreamIdsByChatId,
   saveChat,
@@ -76,13 +75,6 @@ export async function POST(request: Request) {
       return new ChatSDKError('unauthorized:chat').toResponse();
     }
 
-    const userType: UserType = session.user.type;
-    console.log('Getting message Count');
-    const messageCount = await getMessageCountByUserId({
-      id: session.user.id,
-      differenceInHours: 24,
-    });
-
     const chat = await getChatById({ id });
     if (!chat) {
       const title = await generateTitleFromUserMessage({
@@ -135,7 +127,9 @@ export async function POST(request: Request) {
         dataStream.writeData({
           type: 'thinking-start',
           content: hasAttachedDocument
-            ? 'Scanning your document...'
+            ? messages.length > 1
+              ? `Getting relevant information from your document...`
+              : 'Scanning your document...'
             : 'Analyzing your request...',
         });
 
@@ -144,9 +138,11 @@ export async function POST(request: Request) {
           system: systemPrompt({ selectedChatModel }),
           messages,
           maxSteps: 5,
-
           experimental_activeTools: ['createSwot', 'generateQuestions'],
-          experimental_transform: smoothStream({ chunking: 'word' }),
+          experimental_transform: smoothStream({
+            chunking: 'word',
+            delayInMs: 20,
+          }),
           experimental_generateMessageId: generateUUID,
           tools: {
             createSwot: createSwot({ dataStream }),
@@ -234,13 +230,6 @@ export async function POST(request: Request) {
                 stepType: 'generate',
               });
             }
-          },
-
-          // Enhanced reasoning support
-          experimental_providerMetadata: {
-            anthropic: {
-              cacheControl: { type: 'ephemeral' },
-            },
           },
 
           onFinish: async ({ response, usage, finishReason }) => {
