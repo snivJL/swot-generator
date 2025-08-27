@@ -33,19 +33,20 @@ export const generateQuestions = ({ dataStream }: CreateDocumentProps) =>
 
       Example of a single question:
       What is the yearly growth rate?
-      (ARR progression is graphically depicted, but no explicit annual growth percentage is indicated — slide 14.)
+      *(ARR progression is graphically depicted, but no explicit annual growth percentage is indicated — slide 14.)*
 
       Example of perfect output:
       Here are three relevant {category} questions from your library:
-      1. <library question #1> (brief reason the info is missing — e.g., slide 7)
-      2. <library question #2> (brief reason the info is missing — e.g., page 14)
-      3. <library question #3> (brief reason the info is missing — e.g., appendix A, slide 24)
+      1. **<library question #1>** *(brief reason the info is missing — e.g., slide 7)*
+      2. **<library question #2>** *(brief reason the info is missing — e.g., page 14)*
+      3. **<library question #3>** *(brief reason the info is missing — e.g., appendix A, slide 24)*
 
       I’ve also drafted three complementary questions:  
 
-      4. <generated question #1> (brief reason the info is missing — e.g., slide 7)
-      5. <generated question #2> (brief reason the info is missing — e.g., page 12)
-      6. <generated question #3> (brief reason the info is missing — e.g., appendix A, slide 24)
+      4. **<generated question #1>** *(brief reason the info is missing — e.g., slide 7)*
+      5. **<generated question #2>** *(brief reason the info is missing — e.g., page 12)*
+      6. **<generated question #3>** *(brief reason the info is missing — e.g., appendix A, slide 24)*
+    
     `,
     parameters: z.object({
       title: z.string(),
