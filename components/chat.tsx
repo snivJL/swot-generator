@@ -127,6 +127,7 @@ export function Chat({
             'You request have exceeded the duration allowed on the demo environment',
         });
       }
+      stop();
       // Reset thinking state on error
       setThinkingState({ isThinking: false, message: '' });
     },

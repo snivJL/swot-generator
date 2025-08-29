@@ -108,7 +108,7 @@ export function getMessageByErrorCode(errorCode: ErrorCode): string {
       return 'The request to create or update the document was invalid. Please check your input and try again.';
 
     default:
-      return 'Something went wrong. Please try again later.';
+      return 'You request have exceeded the duration allowed on the demo environment';
   }
 }
 
