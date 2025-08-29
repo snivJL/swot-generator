@@ -33,7 +33,7 @@ import { createSwot } from '@/lib/ai/tools/create-swot';
 import { generateQuestions } from '@/lib/ai/tools/generate-questions';
 import { dueDiligenceQuestions } from '@/lib/ai/tools/format-memo';
 
-export const maxDuration = 10;
+export const maxDuration = 5;
 
 let globalStreamContext: ResumableStreamContext | null = null;
 
@@ -70,6 +70,10 @@ export async function POST(request: Request) {
     const { id, message, selectedChatModel, selectedVisibilityType } =
       requestBody;
 
+    const { searchParams } = new URL(request.url);
+    if (searchParams.get('simulate') === 'timeout') {
+      return new Response('Gateway Timeout', { status: 504 });
+    }
     console.log('Checking auth');
     const session = await auth();
 
