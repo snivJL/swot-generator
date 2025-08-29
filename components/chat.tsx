@@ -116,14 +116,19 @@ export function Chat({
       setToolCall(toolCall.toolName);
     },
     onError: (error) => {
+      // Always surface a toast. Prefer ChatSDKError messaging when available,
+      // otherwise show a clear fallback (e.g., timeout/aborted stream).
       if (error instanceof ChatSDKError) {
+        toast({ type: 'error', description: error.message });
+      } else {
         toast({
           type: 'error',
-          description: error.message,
+          description:
+            'You request have exceeded the duration allowed on the demo environment',
         });
       }
       // Reset thinking state on error
-      setThinkingState({ isThinking: false, message: 'Something went wrong' });
+      setThinkingState({ isThinking: false, message: '' });
     },
   });
 

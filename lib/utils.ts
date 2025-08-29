@@ -27,8 +27,18 @@ export async function fetchWithErrorHandlers(
     const response = await fetch(input, init);
 
     if (!response.ok) {
-      const { code, cause } = await response.json();
-      throw new ChatSDKError(code as ErrorCode, cause);
+      // Try to parse structured error; fall back to a generic ChatSDKError
+      try {
+        const { code, cause } = await response.json();
+        throw new ChatSDKError(code as ErrorCode, cause);
+      } catch (_) {
+        // Non-JSON error responses (e.g., 504/timeout HTML) end up here
+        // Normalize to a ChatSDKError so the UI can display a toast.
+        const status = (response as Response).status;
+        const isTimeout = status === 504 || status === 524 || status === 522;
+        const error = new ChatSDKError('offline:api', isTimeout ? 'timeout' : String(status));
+        throw error;
+      }
     }
 
     return response;
@@ -36,8 +46,13 @@ export async function fetchWithErrorHandlers(
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       throw new ChatSDKError('offline:chat');
     }
-
-    throw error;
+    // Normalize fetch/stream/network errors into a ChatSDKError so UI can toast
+    if (error instanceof ChatSDKError) {
+      throw error;
+    }
+    const message = (error as any)?.message || '';
+    const isAbort = message.toLowerCase().includes('abort') || message.toLowerCase().includes('timeout');
+    throw new ChatSDKError('offline:api', isAbort ? 'timeout' : undefined);
   }
 }
 

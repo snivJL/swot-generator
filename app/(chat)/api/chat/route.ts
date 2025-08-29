@@ -33,7 +33,7 @@ import { createSwot } from '@/lib/ai/tools/create-swot';
 import { generateQuestions } from '@/lib/ai/tools/generate-questions';
 import { dueDiligenceQuestions } from '@/lib/ai/tools/format-memo';
 
-export const maxDuration = 300;
+export const maxDuration = 10;
 
 let globalStreamContext: ResumableStreamContext | null = null;
 
@@ -69,6 +69,7 @@ export async function POST(request: Request) {
   try {
     const { id, message, selectedChatModel, selectedVisibilityType } =
       requestBody;
+
     console.log('Checking auth');
     const session = await auth();
 
@@ -288,9 +289,10 @@ export async function POST(request: Request) {
                 });
               } catch (error) {
                 console.error('Failed to save chat:', error);
+                // Send a structured error payload so the client can toast it
                 dataStream.writeData({
                   type: 'error',
-                  content: 'Failed to save conversation',
+                  data: { message: 'Failed to save conversation' },
                 });
               }
             }
