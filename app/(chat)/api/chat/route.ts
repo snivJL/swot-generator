@@ -33,7 +33,7 @@ import { createSwot } from '@/lib/ai/tools/create-swot';
 import { generateQuestions } from '@/lib/ai/tools/generate-questions';
 import { dueDiligenceQuestions } from '@/lib/ai/tools/format-memo';
 
-export const maxDuration = 5;
+export const maxDuration = 300;
 
 let globalStreamContext: ResumableStreamContext | null = null;
 
