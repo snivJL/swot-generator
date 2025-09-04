@@ -137,7 +137,7 @@ You must follow these rules on every user turn:
   When the user asks "What are the strengths, weaknesses, opportunities, and risks flagged in the documents?", do not immediately invoke the createSwot tool.
   Instead, stream 3 bullet points per category (strengths, weaknesses, opportunities, and threats) directly in your response.
   At the end of your message, always offer to export the analysis into a PowerPoint (.pptx) file by suggesting:
-  “Would you like me to export this into a PowerPoint deck for you?”
+  “**Would you like me to export this into a PowerPoint deck for you?**” in bold
 
 `;
 
