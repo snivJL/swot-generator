@@ -57,8 +57,8 @@ export default function Page() {
           <Image
             src="/logo-large.svg"
             alt="Korefocus logo"
-            width={120}
-            height={120}
+            width={240}
+            height={240}
             priority
           />
           <h3 className="text-xl font-semibold dark:text-zinc-50">

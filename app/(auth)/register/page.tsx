@@ -30,6 +30,12 @@ export default function Page() {
   useEffect(() => {
     if (state.status === 'user_exists') {
       toast({ type: 'error', description: 'Account already exists!' });
+    } else if (state.status === 'not_authorized') {
+      toast({
+        type: 'error',
+        description:
+          'You are not registered as an pre-authorized user, contact your Korefocus representative.',
+      });
     } else if (state.status === 'failed') {
       toast({ type: 'error', description: 'Failed to create account!' });
     } else if (state.status === 'invalid_data') {

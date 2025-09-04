@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import { guestRegex, isDevelopmentEnvironment } from './lib/constants';
+import { isDevelopmentEnvironment } from './lib/constants';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -13,7 +13,13 @@ export async function middleware(request: NextRequest) {
     return new Response('pong', { status: 200 });
   }
 
+  // Always allow NextAuth endpoints
   if (pathname.startsWith('/api/auth')) {
+    return NextResponse.next();
+  }
+
+  // Let API routes handle their own auth (they already return 401 JSON)
+  if (pathname.startsWith('/api/')) {
     return NextResponse.next();
   }
 
@@ -23,18 +29,21 @@ export async function middleware(request: NextRequest) {
     secureCookie: !isDevelopmentEnvironment,
   });
 
-  if (!token) {
-    const redirectUrl = encodeURIComponent(request.url);
+  const isGuest = (token as any)?.type === 'guest';
 
-    return NextResponse.redirect(
-      new URL(`/api/auth/guest?redirectUrl=${redirectUrl}`, request.url),
-    );
-  }
-
-  const isGuest = guestRegex.test(token?.email ?? '');
-
+  // Redirect authenticated users away from auth pages
   if (token && !isGuest && ['/login', '/register'].includes(pathname)) {
     return NextResponse.redirect(new URL('/', request.url));
+  }
+
+  // If no token or guest session, only allow login/register
+  if (!token || isGuest) {
+    if (['/login', '/register'].includes(pathname)) {
+      return NextResponse.next();
+    }
+
+    const redirectUrl = encodeURIComponent(request.url);
+    return NextResponse.redirect(new URL(`/login?redirectUrl=${redirectUrl}`, request.url));
   }
 
   return NextResponse.next();
@@ -42,18 +51,12 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/',
-    '/chat/:id',
-    '/api/:path*',
-    '/login',
-    '/register',
-
     /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico, sitemap.xml, robots.txt (metadata files)
+     * Match all paths except for:
+     * - files with an extension (e.g. .svg, .png, .js, .css, etc.)
+     * - Next.js internals (_next/static, _next/image)
+     * - favicon
      */
-    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
+    '/((?!.+\\.[\\w]+$|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
   ],
 };
