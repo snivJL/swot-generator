@@ -5,12 +5,13 @@ import {
   smoothStream,
   streamText,
 } from 'ai';
-import { auth } from '@/app/(auth)/auth';
+import { auth, type UserType } from '@/app/(auth)/auth';
 import { systemPrompt } from '@/lib/ai/prompts';
 import {
   createStreamId,
   deleteChatById,
   getChatById,
+  getMessageCountByUserId,
   getMessagesByChatId,
   getStreamIdsByChatId,
   saveChat,
@@ -32,6 +33,7 @@ import { ChatSDKError } from '@/lib/errors';
 import { createSwot } from '@/lib/ai/tools/create-swot';
 import { generateQuestions } from '@/lib/ai/tools/generate-questions';
 import { dueDiligenceQuestions } from '@/lib/ai/tools/format-memo';
+import { entitlementsByUserType } from '@/lib/ai/entitlements';
 
 export const maxDuration = 300;
 
@@ -79,6 +81,17 @@ export async function POST(request: Request) {
 
     if (!session?.user) {
       return new ChatSDKError('unauthorized:chat').toResponse();
+    }
+
+    const userType: UserType = session.user.type;
+
+    const messageCount = await getMessageCountByUserId({
+      id: session.user.id,
+      differenceInHours: 24,
+    });
+
+    if (messageCount > entitlementsByUserType[userType].maxMessagesPerDay) {
+      return new ChatSDKError('rate_limit:chat').toResponse();
     }
 
     const chat = await getChatById({ id });

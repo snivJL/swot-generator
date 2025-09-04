@@ -267,7 +267,7 @@ function PureSuggestedActions({
           <DrawerHeader>
             <DrawerTitle className="flex items-center gap-2">
               <Sparkles className="w-5 h-5" />
-              Suggested Actions
+              Suggested Prompts
             </DrawerTitle>
           </DrawerHeader>
           <div className="px-4 pb-6 overflow-y-auto">
