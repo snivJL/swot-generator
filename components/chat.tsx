@@ -51,6 +51,7 @@ export function Chat({
   isReadonly,
   session,
   autoResume,
+  initialAttachments = [],
 }: {
   id: string;
   initialMessages: Array<UIMessage>;
@@ -59,6 +60,7 @@ export function Chat({
   isReadonly: boolean;
   session: Session;
   autoResume: boolean;
+  initialAttachments?: Array<Attachment>;
 }) {
   const { mutate } = useSWRConfig();
   const [toolCall, setToolCall] = useState<string>();
@@ -275,11 +277,16 @@ export function Chat({
   const [attachments, setAttachments] = useState<Array<Attachment>>([]);
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
 
-  // Initialize attachments from localStorage or most recent user message with attachments
+  // Initialize attachments from server-provided chat value, then localStorage, then last user message
   useEffect(() => {
     try {
+      if (initialAttachments?.length) {
+        setAttachments(initialAttachments);
+        return;
+      }
       const key = `chat:${id}:attachments`;
-      const stored = typeof window !== 'undefined' ? window.localStorage.getItem(key) : null;
+      const stored =
+        typeof window !== 'undefined' ? window.localStorage.getItem(key) : null;
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
@@ -291,10 +298,14 @@ export function Chat({
       // Fallback: derive from the most recent user message that had attachments
       const lastUserWithAttachments = [...initialMessages]
         .reverse()
-        .find((m) => m.role === 'user' && (m.experimental_attachments?.length ?? 0) > 0);
+        .find(
+          (m) =>
+            m.role === 'user' && (m.experimental_attachments?.length ?? 0) > 0,
+        );
       if (lastUserWithAttachments?.experimental_attachments?.length) {
         setAttachments(
-          (lastUserWithAttachments.experimental_attachments as Array<Attachment>) ?? [],
+          (lastUserWithAttachments.experimental_attachments as Array<Attachment>) ??
+            [],
         );
       }
     } catch (e) {
@@ -315,6 +326,43 @@ export function Chat({
     } catch (e) {
       console.warn('Failed to persist attachments to storage:', e);
     }
+  }, [attachments, id]);
+
+  // Persist attachments to server per chat id
+  useEffect(() => {
+    // Avoid firing on initial mount when attachments are empty and no initial attachments
+    const controller = new AbortController();
+    async function sync() {
+      try {
+        const res = await fetch(`/api/chat`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chatId: id, attachments }),
+          signal: controller.signal,
+        });
+        if (!res.ok) {
+          toast({
+            type: 'error',
+            description: 'Failed to sync attachments. Changes may not persist.',
+          });
+        }
+      } catch (e) {
+        // Ignore abort errors and surface others in console
+        if ((e as any)?.name !== 'AbortError') {
+          console.warn('Failed to sync chat attachments:', e);
+          toast({
+            type: 'error',
+            description: 'Failed to sync attachments. Changes may not persist.',
+          });
+        }
+      }
+    }
+    // Debounce slightly to avoid rapid updates
+    const t = setTimeout(sync, 150);
+    return () => {
+      clearTimeout(t);
+      controller.abort();
+    };
   }, [attachments, id]);
 
   useAutoResume({

@@ -22,7 +22,7 @@ import { SuggestedActions } from './suggested-actions';
 import equal from 'fast-deep-equal';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowDown, Loader, Sparkles } from 'lucide-react';
+import { ArrowDown, Loader, Lightbulb } from 'lucide-react';
 import { useScrollToBottom } from '@/hooks/use-scroll-to-bottom';
 
 function PureMultimodalInput({
@@ -295,11 +295,14 @@ function PureMultimodalInput({
               <Button
                 type="button"
                 onClick={() => setDrawerOpen(true)}
-                className="rounded-md p-[7px] h-fit dark:border-zinc-700 hover:dark:bg-zinc-900 hover:bg-zinc-200"
-                variant="ghost"
+                className="rounded-full h-8 px-3 gap-2 dark:border-zinc-700"
+                variant="outline"
                 size="sm"
+                title="Open suggested prompts"
+                data-testid="open-suggested-actions"
               >
-                <Sparkles className="w-4 h-4" />
+                <Lightbulb className="w-4 h-4" />
+                <span className="text-sm font-medium">Prompts</span>
               </Button>
             </motion.div>
           )}

@@ -16,12 +16,18 @@ import {
   getStreamIdsByChatId,
   saveChat,
   saveMessages,
+  getChatById as getChatByIdQuery,
+  updateChatAttachmentsById,
 } from '@/lib/db/queries';
 import { generateUUID, getTrailingMessageId } from '@/lib/utils';
 import { generateTitleFromUserMessage } from '../../actions';
 import { isProductionEnvironment } from '@/lib/constants';
 import { myProvider } from '@/lib/ai/providers';
-import { postRequestBodySchema, type PostRequestBody } from './schema';
+import {
+  postRequestBodySchema,
+  type PostRequestBody,
+  patchAttachmentsBodySchema,
+} from './schema';
 import {
   createResumableStreamContext,
   type ResumableStreamContext,
@@ -348,6 +354,43 @@ export async function POST(request: Request) {
     }
     console.error('Unexpected error:', error);
     return new ChatSDKError('offline:api').toResponse();
+  }
+}
+
+export async function PATCH(request: Request) {
+  let body: any;
+  try {
+    body = await request.json();
+  } catch (_) {
+    return new ChatSDKError('bad_request:api').toResponse();
+  }
+
+  const parsed = patchAttachmentsBodySchema.safeParse(body);
+  if (!parsed.success) {
+    return new ChatSDKError('bad_request:api').toResponse();
+  }
+
+  const { chatId, attachments } = parsed.data;
+
+  const session = await auth();
+  if (!session?.user) {
+    return new ChatSDKError('unauthorized:chat').toResponse();
+  }
+
+  const chat = await getChatByIdQuery({ id: chatId });
+  if (!chat) {
+    return new ChatSDKError('not_found:chat').toResponse();
+  }
+
+  if (chat.userId !== session.user.id) {
+    return new ChatSDKError('forbidden:chat').toResponse();
+  }
+
+  try {
+    await updateChatAttachmentsById({ chatId, attachments });
+    return new Response(null, { status: 204 });
+  } catch {
+    return new ChatSDKError('bad_request:database').toResponse();
   }
 }
 

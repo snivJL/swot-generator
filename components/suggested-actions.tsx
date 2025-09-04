@@ -10,7 +10,14 @@ import type { Attachment } from 'ai';
 import equal from 'fast-deep-equal';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from './ui/drawer';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
-import { BarChart3, Search, Sparkles, TrendingUp, Shield } from 'lucide-react';
+import {
+  BarChart3,
+  Search,
+  TrendingUp,
+  Shield,
+  ArrowRight,
+  Lightbulb,
+} from 'lucide-react';
 import { InfoIcon } from './icons';
 import { cn } from '@/lib/utils';
 
@@ -163,7 +170,8 @@ function PureSuggestedActions({
     // Allow only: SWOT in Overview, and all actions in Due-diligence
     const isDueDiligence = category.name === 'Due-diligence';
     const isSwotInOverview =
-      category.name === 'Overview' && action.action === 'Conduct a SWOT analysis';
+      category.name === 'Overview' &&
+      action.action === 'Conduct a SWOT analysis';
 
     if (isDueDiligence || isSwotInOverview) return null;
 
@@ -223,7 +231,13 @@ function PureSuggestedActions({
         </div>
       )}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-6">
+        <TabsList
+          className={cn(
+            'grid w-full grid-cols-4 mb-6',
+            mode === 'drawer' &&
+              'sticky top-0 z-20 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b px-2 py-2',
+          )}
+        >
           {actionCategories.map((category) => (
             <TabsTrigger
               key={category.id}
@@ -250,7 +264,7 @@ function PureSuggestedActions({
                   animate="visible"
                   exit="hidden"
                   className={cn('grid gap-3', {
-                    'lg:grid-cols-2': mode === 'drawer',
+                    'sm:grid-cols-2 lg:grid-cols-2': mode === 'drawer',
                   })}
                 >
                   {category.actions.map((suggestedAction, actionIndex) => (
@@ -269,42 +283,46 @@ function PureSuggestedActions({
                           suggestedAction,
                         );
                         const isDisabled = Boolean(disabledReason);
+                        const CategoryIcon = category.icon;
                         return (
-                      <Button
-                        variant="ghost"
-                        onClick={() =>
-                          handleActionClick(suggestedAction.action)
-                        }
-                        disabled={isDisabled}
-                        aria-disabled={isDisabled}
-                        title={disabledReason ?? undefined}
-                        className={cn(
-                          'relative group text-left border rounded-xl px-4 py-4 text-sm w-full h-auto justify-start items-start hover:border-primary/20 hover:bg-gradient-to-br hover:from-background hover:to-muted/50 transition-all duration-300 min-h-[40px]',
-                          {
-                            'opacity-60 cursor-not-allowed hover:from-background hover:to-muted':
-                              isDisabled,
-                          },
-                        )}
-                      >
-                        <div className="flex items-start w-full">
-                          <div className="flex-1">
-                            <span className="font-medium block leading-relaxed text-foreground">
-                              {suggestedAction.question}
-                            </span>
-                            {isDisabled && (
-                              <span className="mt-1 block text-xs text-muted-foreground">
-                                {disabledReason}
-                              </span>
+                          <Button
+                            variant="ghost"
+                            onClick={() =>
+                              handleActionClick(suggestedAction.action)
+                            }
+                            disabled={isDisabled}
+                            aria-disabled={isDisabled}
+                            title={disabledReason ?? undefined}
+                            className={cn(
+                              'relative group text-left border rounded-xl px-4 py-4 text-sm w-full h-auto justify-start items-start hover:border-primary/20 hover:bg-gradient-to-br hover:from-background hover:to-muted/50 transition-all duration-300 min-h-[56px] shadow-sm hover:shadow',
+                              {
+                                'opacity-60 cursor-not-allowed hover:from-background hover:to-muted':
+                                  isDisabled,
+                              },
                             )}
-                          </div>
-                        </div>
+                          >
+                            <div className="flex items-center w-full gap-3">
+                              <div className="flex-1">
+                                <span className="font-medium block leading-relaxed text-foreground">
+                                  {suggestedAction.question}
+                                </span>
+                                {isDisabled && (
+                                  <span className="mt-1 block text-xs text-muted-foreground">
+                                    {disabledReason}
+                                  </span>
+                                )}
+                              </div>
+                              {!isDisabled && (
+                                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                              )}
+                            </div>
 
-                        <motion.div
-                          className={`absolute inset-0 rounded-xl bg-gradient-to-r ${category.color} opacity-0 group-hover:opacity-5`}
-                          initial={false}
-                          transition={{ duration: 0.3 }}
-                        />
-                      </Button>
+                            <motion.div
+                              className={`absolute inset-0 rounded-xl bg-gradient-to-r ${category.color} opacity-0 group-hover:opacity-5`}
+                              initial={false}
+                              transition={{ duration: 0.3 }}
+                            />
+                          </Button>
                         );
                       })()}
                     </motion.div>
@@ -321,14 +339,14 @@ function PureSuggestedActions({
   if (mode === 'drawer') {
     return (
       <Drawer open={isOpen} onOpenChange={onOpenChange}>
-        <DrawerContent className="max-h-[60vh]">
-          <DrawerHeader>
+        <DrawerContent className="max-h-[70vh] sm:max-h-[65vh]">
+          <DrawerHeader className="pb-3">
             <DrawerTitle className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5" />
+              <Lightbulb className="w-5 h-5" />
               Suggested Prompts
             </DrawerTitle>
           </DrawerHeader>
-          <div className="px-4 pb-6 overflow-y-auto">
+          <div className="px-4 py-6 overflow-y-auto">
             {renderContent({ mode })}
           </div>
         </DrawerContent>

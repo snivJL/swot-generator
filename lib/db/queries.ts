@@ -98,6 +98,7 @@ export async function saveChat({
       userId,
       title,
       visibility,
+      attachments: [],
     });
   } catch (error) {
     throw new ChatSDKError('bad_request:database', 'Failed to save chat');
@@ -465,6 +466,26 @@ export async function updateChatVisiblityById({
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to update chat visibility by id',
+    );
+  }
+}
+
+export async function updateChatAttachmentsById({
+  chatId,
+  attachments,
+}: {
+  chatId: string;
+  attachments: any[];
+}) {
+  try {
+    return await db
+      .update(chat)
+      .set({ attachments })
+      .where(eq(chat.id, chatId));
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to update chat attachments by id',
     );
   }
 }
