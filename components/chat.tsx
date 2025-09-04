@@ -19,6 +19,7 @@ import { useSearchParams } from 'next/navigation';
 import { useChatVisibility } from '@/hooks/use-chat-visibility';
 import { useAutoResume } from '@/hooks/use-auto-resume';
 import { ChatSDKError } from '@/lib/errors';
+import type { StreamEvent } from '@/lib/ai/stream-events';
 
 // Types for enhanced thinking state
 interface ThinkingState {
@@ -114,6 +115,12 @@ export function Chat({
     },
     onToolCall({ toolCall }) {
       setToolCall(toolCall.toolName);
+      setThinkingState((prev) => ({
+        ...prev,
+        isThinking: true,
+        toolName: toolCall.toolName,
+        status: 'update',
+      }));
     },
     onError: (error) => {
       // Always surface a toast. Prefer ChatSDKError messaging when available,
@@ -123,8 +130,7 @@ export function Chat({
       } else {
         toast({
           type: 'error',
-          description:
-            'You request have exceeded the duration allowed on the demo environment',
+          description: 'Request failed. Please try again.',
         });
       }
       stop();
@@ -145,11 +151,7 @@ export function Chat({
     console.log('Received data part:', latestData);
 
     // Type guard to ensure we have the expected structure
-    const dataPart = latestData as {
-      type?: string;
-      data?: any;
-      content?: string;
-    };
+    const dataPart = latestData as StreamEvent;
 
     switch (dataPart.type) {
       case 'thinking-start':
@@ -175,40 +177,60 @@ export function Chat({
         }));
         break;
 
-      case 'tool-progress':
-        // biome-ignore lint/correctness/noSwitchDeclarations: <explanation>
-        const progressData = dataPart.data as any;
-
-        if (progressData?.type === 'tool-progress') {
-          setThinkingState((prev) => ({
-            ...prev,
-            message: dataPart.content || 'Processing',
-            status: 'update',
-          }));
+      case 'tool-progress': {
+        const toolName = dataPart.toolName;
+        const message =
+          typeof dataPart.content === 'string'
+            ? dataPart.content
+            : 'Processing';
+        setThinkingState((prev) => ({
+          ...prev,
+          isThinking: true,
+          toolName: toolName ?? prev.toolName,
+          message,
+          status: 'update',
+        }));
+        if (toolName) {
           setToolProgress((prev) => ({
             ...prev,
-            [progressData.toolName]: {
-              toolName: progressData.toolName,
-              progress: progressData.progress || 0,
-              message: progressData.content || 'Processing...',
-              type: progressData.type,
+            [toolName]: {
+              toolName,
+              progress:
+                typeof dataPart.progress === 'number' ? dataPart.progress : 0,
+              message,
+              type: 'tool-progress',
             },
           }));
-        } else if (progressData?.type === 'question-generated') {
-          setGeneratedQuestions((prev) => [
-            ...prev,
-            {
-              content: progressData.content,
-              type: progressData.questionType || 'custom',
-              index: progressData.questionIndex || prev.length,
-            },
-          ]);
         }
         break;
+      }
+
+      case 'question-generated': {
+        const idx =
+          typeof dataPart.questionIndex === 'number'
+            ? dataPart.questionIndex
+            : undefined;
+        const qContent = dataPart.content as any;
+        const contentStr =
+          typeof qContent === 'string'
+            ? qContent
+            : (qContent?.question ?? JSON.stringify(qContent));
+        setGeneratedQuestions((prev) => [
+          ...prev,
+          {
+            content: contentStr,
+            type: dataPart.questionType || 'custom',
+            index: idx ?? prev.length,
+          },
+        ]);
+        break;
+      }
 
       case 'completion-meta':
         try {
-          const meta = dataPart.data as any;
+          const meta = JSON.parse(
+            typeof dataPart.content === 'string' ? dataPart.content : '{}',
+          );
           console.log('Completion metadata:', meta);
         } catch (e) {
           console.warn('Failed to parse completion metadata:', e);
@@ -216,11 +238,9 @@ export function Chat({
         break;
 
       case 'error':
-        // biome-ignore lint/correctness/noSwitchDeclarations: <explanation>
-        const errorData = dataPart.data as any;
         toast({
           type: 'error',
-          description: errorData?.message || 'An error occurred',
+          description: dataPart.data?.message || 'An error occurred',
         });
         setThinkingState({ isThinking: false, message: '' });
         break;
