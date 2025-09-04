@@ -1,6 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import { guestRegex, isDevelopmentEnvironment } from './lib/constants';
+import {
+  guestRegex,
+  isDevelopmentEnvironment,
+  isTestEnvironment,
+} from './lib/constants';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -23,15 +27,28 @@ export async function middleware(request: NextRequest) {
     secureCookie: !isDevelopmentEnvironment,
   });
 
+  // If no session token: only auto-auth as guest during tests; otherwise go to login
   if (!token) {
     const redirectUrl = encodeURIComponent(request.url);
 
-    return NextResponse.redirect(
-      new URL(`/api/auth/guest?redirectUrl=${redirectUrl}`, request.url),
-    );
+    if (isTestEnvironment) {
+      return NextResponse.redirect(
+        new URL(`/api/auth/guest?redirectUrl=${redirectUrl}`, request.url),
+      );
+    }
+
+    return NextResponse.redirect(new URL(`/login`, request.url));
   }
 
-  const isGuest = guestRegex.test(token?.email ?? '');
+  const isGuest =
+    (token as any)?.type === 'guest' || guestRegex.test(token?.email ?? '');
+
+  // Block guest users from protected app routes (e.g., home, chat)
+  const isProtectedAppPath = pathname === '/' || pathname.startsWith('/chat');
+
+  if (!isTestEnvironment && isGuest && isProtectedAppPath) {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
 
   if (token && !isGuest && ['/login', '/register'].includes(pathname)) {
     return NextResponse.redirect(new URL('/', request.url));

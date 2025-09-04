@@ -4,13 +4,17 @@ import { Chat } from '@/components/chat';
 import { DEFAULT_CHAT_MODEL } from '@/lib/ai/models';
 import { generateUUID } from '@/lib/utils';
 import { auth } from '../(auth)/auth';
+import { isTestEnvironment } from '@/lib/constants';
 import { redirect } from 'next/navigation';
 
 export default async function Page() {
   const session = await auth();
 
   if (!session) {
-    redirect('/api/auth/guest');
+    if (isTestEnvironment) {
+      redirect('/api/auth/guest');
+    }
+    redirect('/login');
   }
 
   const id = generateUUID();
