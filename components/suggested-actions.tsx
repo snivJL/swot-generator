@@ -11,6 +11,7 @@ import equal from 'fast-deep-equal';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from './ui/drawer';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
 import { BarChart3, Search, Sparkles, TrendingUp, Shield } from 'lucide-react';
+import { InfoIcon } from './icons';
 import { cn } from '@/lib/utils';
 
 interface SuggestedAction {
@@ -150,6 +151,25 @@ function PureSuggestedActions({
 }: SuggestedActionsProps) {
   const [activeTab, setActiveTab] = useState(actionCategories[0].id);
 
+  const hasAttachment = (attachments?.length ?? 0) > 0;
+
+  const getActionDisabledReason = (
+    category: ActionCategory,
+    action: SuggestedAction,
+  ): string | null => {
+    // Always require an attachment
+    if (!hasAttachment) return 'Attach a file to get started';
+
+    // Allow only: SWOT in Overview, and all actions in Due-diligence
+    const isDueDiligence = category.name === 'Due-diligence';
+    const isSwotInOverview =
+      category.name === 'Overview' && action.action === 'Conduct a SWOT analysis';
+
+    if (isDueDiligence || isSwotInOverview) return null;
+
+    return 'Demo: this prompt is disabled';
+  };
+
   const handleActionClick = async (action: string) => {
     window.history.replaceState({}, '', `/chat/${chatId}`);
     append({
@@ -187,6 +207,21 @@ function PureSuggestedActions({
 
   const renderContent = ({ mode }: { mode?: 'initial' | 'drawer' }) => (
     <div className="space-y-6">
+      {!hasAttachment && (
+        <div className="mx-6">
+          <div className="flex items-start gap-3 rounded-xl border bg-muted/40 px-4 py-3 text-sm">
+            <div className="mt-0.5 text-muted-foreground">
+              <InfoIcon size={16} />
+            </div>
+            <div className="leading-relaxed">
+              <span className="font-medium">Attach a file to get started.</span>
+              <span className="ml-1 text-muted-foreground">
+                Prompts activate once a document is attached.
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4 mb-6">
           {actionCategories.map((category) => (
@@ -228,18 +263,39 @@ function PureSuggestedActions({
                       }}
                       whileTap={{ scale: 0.98 }}
                     >
+                      {(() => {
+                        const disabledReason = getActionDisabledReason(
+                          category,
+                          suggestedAction,
+                        );
+                        const isDisabled = Boolean(disabledReason);
+                        return (
                       <Button
                         variant="ghost"
                         onClick={() =>
                           handleActionClick(suggestedAction.action)
                         }
-                        className="relative group text-left border rounded-xl px-4 py-4 text-sm w-full h-auto justify-start items-start hover:border-primary/20 hover:bg-gradient-to-br hover:from-background hover:to-muted/50 transition-all duration-300 min-h-[40px]"
+                        disabled={isDisabled}
+                        aria-disabled={isDisabled}
+                        title={disabledReason ?? undefined}
+                        className={cn(
+                          'relative group text-left border rounded-xl px-4 py-4 text-sm w-full h-auto justify-start items-start hover:border-primary/20 hover:bg-gradient-to-br hover:from-background hover:to-muted/50 transition-all duration-300 min-h-[40px]',
+                          {
+                            'opacity-60 cursor-not-allowed hover:from-background hover:to-muted':
+                              isDisabled,
+                          },
+                        )}
                       >
                         <div className="flex items-start w-full">
                           <div className="flex-1">
                             <span className="font-medium block leading-relaxed text-foreground">
                               {suggestedAction.question}
                             </span>
+                            {isDisabled && (
+                              <span className="mt-1 block text-xs text-muted-foreground">
+                                {disabledReason}
+                              </span>
+                            )}
                           </div>
                         </div>
 
@@ -249,6 +305,8 @@ function PureSuggestedActions({
                           transition={{ duration: 0.3 }}
                         />
                       </Button>
+                        );
+                      })()}
                     </motion.div>
                   ))}
                 </motion.div>
