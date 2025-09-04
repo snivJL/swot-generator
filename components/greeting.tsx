@@ -13,7 +13,7 @@ export const Greeting = () => {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 10 }}
         transition={{ delay: 0.3 }}
-        className="text-center mb-8"
+        className="text-center"
       >
         <h1 className="text-3xl font-bold text-gray-900 mb-4">
           Korefocus VC/PE Analysis Assistant
@@ -23,7 +23,7 @@ export const Greeting = () => {
         </p>
       </motion.div>
 
-      <motion.div
+      {/* <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 10 }}
@@ -31,7 +31,7 @@ export const Greeting = () => {
         className="text-xl text-zinc-500 text-center"
       >
         Choose from these suggested prompts
-      </motion.div>
+      </motion.div> */}
     </div>
   );
 };

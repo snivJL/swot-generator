@@ -114,12 +114,14 @@ function PureMessages({
           </div>
         )}
 
-      <motion.div
-        ref={messagesEndRef}
-        className="shrink-0 min-w-[24px] min-h-[24px]"
-        onViewportLeave={onViewportLeave}
-        onViewportEnter={onViewportEnter}
-      />
+      {messages.length > 0 ? (
+        <motion.div
+          ref={messagesEndRef}
+          className="shrink-0 min-w-[24px] min-h-[24px]"
+          onViewportLeave={onViewportLeave}
+          onViewportEnter={onViewportEnter}
+        />
+      ) : null}
     </div>
   );
 }

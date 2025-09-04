@@ -275,6 +275,48 @@ export function Chat({
   const [attachments, setAttachments] = useState<Array<Attachment>>([]);
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
 
+  // Initialize attachments from localStorage or most recent user message with attachments
+  useEffect(() => {
+    try {
+      const key = `chat:${id}:attachments`;
+      const stored = typeof window !== 'undefined' ? window.localStorage.getItem(key) : null;
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setAttachments(parsed as Array<Attachment>);
+          return;
+        }
+      }
+
+      // Fallback: derive from the most recent user message that had attachments
+      const lastUserWithAttachments = [...initialMessages]
+        .reverse()
+        .find((m) => m.role === 'user' && (m.experimental_attachments?.length ?? 0) > 0);
+      if (lastUserWithAttachments?.experimental_attachments?.length) {
+        setAttachments(
+          (lastUserWithAttachments.experimental_attachments as Array<Attachment>) ?? [],
+        );
+      }
+    } catch (e) {
+      // noop; if parsing fails, keep default empty attachments
+      console.warn('Failed to restore attachments from storage:', e);
+    }
+    // run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist attachments per chat so they survive refresh and re-open
+  useEffect(() => {
+    try {
+      const key = `chat:${id}:attachments`;
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(key, JSON.stringify(attachments ?? []));
+      }
+    } catch (e) {
+      console.warn('Failed to persist attachments to storage:', e);
+    }
+  }, [attachments, id]);
+
   useAutoResume({
     autoResume,
     initialMessages,
