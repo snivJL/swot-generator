@@ -15,10 +15,18 @@ export const Question = z
 
 export const dueDiligenceQuestions = ({ dataStream }: FormatMemoProps) =>
   tool({
-    description: `Use this tool when the user asks to write an initial due-diligence request.
+    description: `Use this tool when the user asks to write an INITIAL due-diligence request or when NO CATEGORY is specified.
+      Do NOT use this tool if the user requests due-diligence questions for a specific category such as "Financial & Commercial", "Legal, Compliance & Governance", or "Technology & HR" (use generateQuestions instead).
        All questions must be relevant to the document content but cannot be directly answered by it.
       They should expose gaps, ambiguities, or missing details that require additional investigation.
       Cite the page where the lack of information is observed.
+      Trigger examples (use this tool):
+        - "Write an initial due-diligence request"
+        - "Write a due-diligence request" (no category)
+      Non-trigger examples (do NOT use this tool):
+        - "Write Financial & Commercial due-diligence request"
+        - "Write a Legal, Compliance & Governance due-diligence request"
+        - "Write a Technology & HR due-diligence request"
       <example>
         What is the yearly growth rate?
         (ARR progression is graphically depicted, but no explicit annual growth percentage is indicated – page 14.)  
