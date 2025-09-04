@@ -36,7 +36,10 @@ export async function fetchWithErrorHandlers(
         // Normalize to a ChatSDKError so the UI can display a toast.
         const status = (response as Response).status;
         const isTimeout = status === 504 || status === 524 || status === 522;
-        const error = new ChatSDKError('offline:api', isTimeout ? 'timeout' : String(status));
+        const error = new ChatSDKError(
+          'offline:api',
+          isTimeout ? 'timeout' : String(status),
+        );
         throw error;
       }
     }
@@ -51,7 +54,9 @@ export async function fetchWithErrorHandlers(
       throw error;
     }
     const message = (error as any)?.message || '';
-    const isAbort = message.toLowerCase().includes('abort') || message.toLowerCase().includes('timeout');
+    const isAbort =
+      message.toLowerCase().includes('abort') ||
+      message.toLowerCase().includes('timeout');
     throw new ChatSDKError('offline:api', isAbort ? 'timeout' : undefined);
   }
 }

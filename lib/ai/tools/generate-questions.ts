@@ -9,6 +9,10 @@ interface CreateDocumentProps {
 export const generateQuestions = ({ dataStream }: CreateDocumentProps) =>
   tool({
     description: `
+      Use this tool ONLY when the user asks for due-diligence questions in a SPECIFIC CATEGORY
+      (Financial & Commercial, Technology & HR, or Legal, Compliance & Governance).
+      Do NOT use this tool when the user requests an "initial" due-diligence request or when no category is specified.
+
       Analyze the provided document and generate 6 total due diligence questions:
       - 3 questions selected from the template library 
       - 3 custom generated questions
@@ -28,6 +32,15 @@ export const generateQuestions = ({ dataStream }: CreateDocumentProps) =>
       Legal, Compliance & Governance:
       ${questionsFromTemplate.legalComplianceAndGovernance.map((q, i) => `${i + 1}. ${q}`).join('\n')}
 
+      ---
+      Trigger examples (use this tool):
+      - "Write Financial & Commercial due-diligence request"
+      - "Write a Legal, Compliance & Governance due-diligence request"
+      - "Write a Technology & HR due-diligence request"
+
+      Do NOT use this tool for:
+      - "Write an initial due-diligence request"
+      - "Write a due-diligence request" (no category)
       ---
       Examples
 
