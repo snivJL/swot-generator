@@ -107,6 +107,7 @@ function PureMultimodalInput({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadQueue, setUploadQueue] = useState<Array<string>>([]);
+  const hasAttachment = (attachments?.length ?? 0) > 0;
 
   const submitForm = useCallback(() => {
     window.history.replaceState({}, '', `/chat/${chatId}`);
@@ -159,27 +160,35 @@ function PureMultimodalInput({
 
   const handleFileChange = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(event.target.files || []);
-      setUploadQueue(files.map((file) => file.name));
+      if (hasAttachment) {
+        // Safety guard if input isn't disabled for some reason
+        toast.error('Only one attachment is allowed per conversation.');
+        if (event.target) event.target.value = '';
+        return;
+      }
+
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      setUploadQueue([file.name]);
 
       try {
-        const uploadPromises = files.map((file) => uploadFile(file));
-        const uploadedAttachments = await Promise.all(uploadPromises);
-        const successfullyUploadedAttachments = uploadedAttachments.filter(
-          (attachment) => attachment !== undefined,
-        );
-
-        setAttachments((currentAttachments) => [
-          ...currentAttachments,
-          ...successfullyUploadedAttachments,
-        ]);
+        const uploadedAttachment = await uploadFile(file);
+        if (uploadedAttachment) {
+          setAttachments((currentAttachments) => [
+            ...currentAttachments,
+            uploadedAttachment,
+          ]);
+        }
       } catch (error) {
-        console.error('Error uploading files!', error);
+        console.error('Error uploading file!', error);
       } finally {
         setUploadQueue([]);
+        // allow re-selecting the same file
+        if (event.target) event.target.value = '';
       }
     },
-    [setAttachments],
+    [setAttachments, hasAttachment],
   );
 
   const { isAtBottom, scrollToBottom } = useScrollToBottom();
@@ -239,9 +248,11 @@ function PureMultimodalInput({
         type="file"
         className="fixed -top-4 -left-4 size-0.5 opacity-0 pointer-events-none"
         ref={fileInputRef}
-        multiple
         onChange={handleFileChange}
         tabIndex={-1}
+        disabled={hasAttachment}
+        aria-disabled={hasAttachment}
+        title={hasAttachment ? 'Only one attachment allowed' : undefined}
       />
 
       <Textarea
@@ -281,6 +292,7 @@ function PureMultimodalInput({
           isUploading={isUploading}
           fileInputRef={fileInputRef}
           status={status}
+          hasAttachment={hasAttachment}
         />
 
         {/* Prompt Library Button - only show when there are messages */}
@@ -338,10 +350,12 @@ function PureAttachmentsButton({
   isUploading,
   fileInputRef,
   status,
+  hasAttachment,
 }: {
   isUploading: boolean;
   fileInputRef: React.MutableRefObject<HTMLInputElement | null>;
   status: UseChatHelpers['status'];
+  hasAttachment: boolean;
 }) {
   return (
     <Button
@@ -351,8 +365,15 @@ function PureAttachmentsButton({
         event.preventDefault();
         fileInputRef.current?.click();
       }}
-      disabled={status !== 'ready' || isUploading}
+      disabled={status !== 'ready' || isUploading || hasAttachment}
       variant="ghost"
+      title={
+        hasAttachment
+          ? 'Only one attachment allowed'
+          : status !== 'ready'
+            ? 'Please wait for the model to finish'
+            : undefined
+      }
     >
       {isUploading ? (
         <Loader size={14} className="animate-spin" />
