@@ -7,6 +7,7 @@ import { getChatById, getMessagesByChatId } from '@/lib/db/queries';
 import { DEFAULT_CHAT_MODEL } from '@/lib/ai/models';
 import type { DBMessage } from '@/lib/db/schema';
 import type { Attachment, UIMessage } from 'ai';
+import { isTestEnvironment } from '@/lib/constants';
 
 export default async function Page(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
