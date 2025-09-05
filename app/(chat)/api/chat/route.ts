@@ -67,7 +67,6 @@ function getStreamContext() {
 
 export async function POST(request: Request) {
   let requestBody: PostRequestBody;
-  console.log('Api Called');
   try {
     const json = await request.json();
     requestBody = postRequestBodySchema.parse(json);
@@ -82,7 +81,7 @@ export async function POST(request: Request) {
     if (searchParams.get('simulate') === 'timeout') {
       return new Response('Gateway Timeout', { status: 504 });
     }
-    console.log('Checking auth');
+
     const session = await auth();
 
     if (!session?.user) {
@@ -116,7 +115,7 @@ export async function POST(request: Request) {
         return new ChatSDKError('forbidden:chat').toResponse();
       }
     }
-    console.log('Getting messages...');
+
     const previousMessages = await getMessagesByChatId({ id });
 
     const messages = appendClientMessage({
@@ -124,7 +123,7 @@ export async function POST(request: Request) {
       messages: previousMessages,
       message,
     });
-    console.log('Saving messages...');
+
     await saveMessages({
       messages: [
         {
@@ -140,11 +139,9 @@ export async function POST(request: Request) {
 
     const streamId = generateUUID();
     await createStreamId({ streamId, chatId: id });
-    console.log('Creating data stream...');
 
     const stream = createDataStream({
       execute: (dataStream) => {
-        // Send initial thinking state
         const hasAttachedDocument = messages.some(
           (message) =>
             message.role === 'user' && message.experimental_attachments?.length,
@@ -166,83 +163,20 @@ export async function POST(request: Request) {
           experimental_activeTools: [
             'createSwot',
             'generateQuestions',
-            // 'createMemo',
             'dueDiligenceQuestions',
           ],
           experimental_transform: smoothStream({
-            chunking: 'word',
+            chunking: 'line',
             delayInMs: 20,
           }),
           experimental_generateMessageId: generateUUID,
           tools: {
             createSwot: createSwot({ dataStream }),
             generateQuestions: generateQuestions({ dataStream }),
-            // createMemo: createMemo({ dataStream }),
             dueDiligenceQuestions: dueDiligenceQuestions({ dataStream }),
           },
 
           onStepFinish({ text, toolCalls, toolResults, finishReason, usage }) {
-            // console.groupCollapsed(
-            //   '%c✨ Step Finished',
-            //   'color: #0A6AE7; font-weight: bold; font-size: 12px;',
-            // );
-            // console.log('%cText:', 'font-weight: bold;', text);
-
-            // Send immediate feedback when tool calls are detected
-            // if (Array.isArray(toolCalls) && toolCalls.length) {
-            //   console.groupCollapsed('🔧 Tool Calls');
-            //   toolCalls.forEach((call, i) => {
-            //     console.groupCollapsed(`Call ${i} – ${call.toolName}`);
-            //     console.log('%cType:', 'font-weight:bold;', call.type);
-            //     console.log(
-            //       '%ctoolCallId:',
-            //       'font-weight:bold;',
-            //       call.toolCallId,
-            //     );
-            //     console.log('Args (JSON):', JSON.stringify(call.args, null, 2));
-
-            //     // Send tool starting feedback when we detect the call
-            //     // const toolFeedback = getToolFeedback(call.toolName);
-            //     // dataStream.writeData({
-            //     //   type: 'thinking-update',
-            //     //   content: toolFeedback.starting,
-            //     //   stepType: 'tool-call',
-            //     //   toolName: call.toolName,
-            //     // });
-
-            //     console.groupEnd();
-            //   });
-            //   console.groupEnd();
-            // }
-
-            // // Tool results feedback
-            // if (Array.isArray(toolResults) && toolResults.length) {
-            //   console.groupCollapsed('📥 Tool Results');
-            //   toolResults.forEach((res, i) => {
-            //     console.groupCollapsed(`Result ${i} – ${res.toolName}`);
-            //     console.log('%cType:', 'font-weight:bold;', res.type);
-            //     console.log(
-            //       '%ctoolCallId:',
-            //       'font-weight:bold;',
-            //       res.toolCallId,
-            //     );
-            //     console.log('%cArgs:', 'font-weight:bold;', res.args);
-            //     console.dir(res.result, { depth: null });
-
-            //     // Send completion feedback
-            //     const toolFeedback = getToolFeedback(res.toolName);
-            //     dataStream.writeData({
-            //       type: 'thinking-update',
-            //       content: toolFeedback.completed,
-            //       stepType: 'tool-result',
-            //       toolName: res.toolName,
-            //     });
-
-            //     console.groupEnd();
-            //   });
-            //   console.groupEnd();
-            // }
-
             if (finishReason === 'stop') {
               dataStream.writeData({
                 type: 'thinking-update',
@@ -250,11 +184,11 @@ export async function POST(request: Request) {
                 stepType: 'completion',
               });
             } else if (finishReason === 'tool-calls') {
-              // dataStream.writeData({
-              //   type: 'thinking-update',
-              //   content: 'Processing tool results...',
-              //   stepType: 'processing',
-              // });
+              dataStream.writeData({
+                type: 'thinking-update',
+                content: 'Processing tool results and finalizing response...',
+                stepType: 'processing',
+              });
             } else if (text?.trim()) {
               dataStream.writeData({
                 type: 'thinking-update',
@@ -301,7 +235,6 @@ export async function POST(request: Request) {
                   ],
                 });
 
-                // Send final completion data
                 dataStream.writeData({
                   type: 'completion-meta',
                   content: JSON.stringify({
@@ -312,7 +245,6 @@ export async function POST(request: Request) {
                 });
               } catch (error) {
                 console.error('Failed to save chat:', error);
-                // Send a structured error payload so the client can toast it
                 dataStream.writeData({
                   type: 'error',
                   data: { message: 'Failed to save conversation' },
@@ -394,34 +326,6 @@ export async function PATCH(request: Request) {
   }
 }
 
-// Helper function to provide contextual feedback for different tools
-function getToolFeedback(toolName: string) {
-  const feedbackMap: Record<
-    string,
-    { starting: string; executing: string; completed: string }
-  > = {
-    createSwot: {
-      starting: 'Preparing SWOT analysis...',
-      executing:
-        'Analyzing strengths, weaknesses, opportunities, and threats...',
-      completed: 'SWOT analysis complete',
-    },
-    generateQuestions: {
-      starting: 'Preparing due diligence questions...',
-      executing: 'Generating relevant questions for your analysis...',
-      completed: 'Questions generated successfully',
-    },
-    default: {
-      starting: 'Initializing tool...',
-      executing: 'Processing with tool...',
-      completed: 'Tool execution complete',
-    },
-  };
-
-  return feedbackMap[toolName] || feedbackMap.default;
-}
-
-// Keep existing GET and DELETE methods unchanged
 export async function GET(request: Request) {
   const streamContext = getStreamContext();
   const resumeRequestedAt = new Date();

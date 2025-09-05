@@ -189,7 +189,7 @@ function getStepColor(stepType?: string): string {
 }
 
 // Helper function to get user-friendly tool names
-function getToolDisplayName(toolName: string): string {
+export function getToolDisplayName(toolName: string): string {
   switch (toolName) {
     case 'createMemo':
       return 'Memo Creator';

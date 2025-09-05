@@ -72,7 +72,7 @@ export const createSwot = ({ dataStream }: CreateDocumentProps) =>
         opportunities,
         threats,
       });
-      console.log('URL', url);
+
       dataStream.writeData({ type: 'finish', content: '' });
       return {
         id,

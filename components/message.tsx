@@ -20,6 +20,7 @@ import { MessageReasoning } from './message-reasoning';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import { DownloadLink } from './download-link';
 import Image from 'next/image';
+import { getToolDisplayName } from './thinking-message';
 
 interface GeneratedQuestion {
   content: string;
@@ -43,62 +44,121 @@ interface ThinkingInfo {
   status?: string;
 }
 
+// Map step types to a consistent color used for accents/progress
+function getStepAccent(stepType?: string): string {
+  switch (stepType) {
+    case 'tool-call':
+      return '#3b82f6'; // blue
+    case 'tool-execution':
+      return '#f59e0b'; // amber
+    case 'tool-result':
+      return '#10b981'; // emerald
+    case 'generate':
+      return '#8b5cf6'; // violet
+    case 'processing':
+      return '#6366f1'; // indigo
+    case 'completion':
+      return '#10b981'; // emerald
+    default:
+      return 'rgba(0,0,0,0.6)';
+  }
+}
+
+// Format step type for display
+function formatStep(stepType?: string): string | undefined {
+  if (!stepType) return undefined;
+  return stepType.replace(/-/g, ' ');
+}
+
 const ThinkingIndicator = ({
   thinkingInfo,
 }: { thinkingInfo: ThinkingInfo }) => {
   if (!thinkingInfo.isThinking) return null;
 
+  const accent = getStepAccent(thinkingInfo.stepType);
+  const stepLabel = formatStep(thinkingInfo.stepType);
+  const progress =
+    typeof thinkingInfo.progress === 'number'
+      ? Math.max(0, Math.min(100, thinkingInfo.progress))
+      : undefined;
+
   return (
     <motion.div
+      role="status"
+      aria-live="polite"
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.2, ease: 'easeOut' }}
       className="border border-border/50 bg-muted/20 rounded-lg p-4 mb-4"
     >
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-1">
+      <div className="flex items-start gap-3">
+        {/* Animated dots with step accent */}
+        <div className="flex items-center gap-1 pt-1">
           <div
-            className="size-1 bg-foreground/40 rounded-full animate-pulse"
-            style={{ animationDelay: '0ms' }}
+            className="size-1 rounded-full animate-pulse"
+            style={{ animationDelay: '0ms', backgroundColor: accent }}
           />
           <div
-            className="size-1 bg-foreground/40 rounded-full animate-pulse"
-            style={{ animationDelay: '150ms' }}
+            className="size-1 rounded-full animate-pulse"
+            style={{ animationDelay: '150ms', backgroundColor: accent }}
           />
           <div
-            className="size-1 bg-foreground/40 rounded-full animate-pulse"
-            style={{ animationDelay: '300ms' }}
+            className="size-1 rounded-full animate-pulse"
+            style={{ animationDelay: '300ms', backgroundColor: accent }}
           />
         </div>
 
         <div className="flex-1 min-w-0">
+          {/* Primary message */}
           <span className="text-sm text-foreground/80 font-medium leading-tight">
-            {thinkingInfo.message}
+            {thinkingInfo.message || 'Thinking...'}
           </span>
 
-          {thinkingInfo.currentToolCall && (
-            <div className="mt-1">
-              <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-md border border-border/30">
-                {thinkingInfo.currentToolCall}
-              </span>
+          {/* Meta row: step label + tool name + status */}
+          {(stepLabel || thinkingInfo.currentToolCall || thinkingInfo.status) && (
+            <div className="mt-1 flex items-center gap-2 flex-wrap">
+              {stepLabel && (
+                <span className="text-xs text-muted-foreground/80 capitalize">
+                  {stepLabel}
+                </span>
+              )}
+
+              {thinkingInfo.currentToolCall && (
+                <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-md border border-border/30">
+                  {getToolDisplayName(thinkingInfo.currentToolCall)}
+                </span>
+              )}
+
+              {thinkingInfo.status && (
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70 bg-muted/40 px-1.5 py-0.5 rounded border border-border/30">
+                  {thinkingInfo.status}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Progress bar with percentage */}
+          {typeof progress === 'number' && progress > 0 && (
+            <div className="mt-3">
+              <div className="w-full bg-muted/50 rounded-full h-1.5 overflow-hidden">
+                <motion.div
+                  className="h-full rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                  style={{ backgroundColor: accent }}
+                />
+              </div>
+              <div className="mt-1 flex justify-end">
+                <span className="text-[10px] text-muted-foreground/70">
+                  {Math.round(progress)}%
+                </span>
+              </div>
             </div>
           )}
         </div>
       </div>
-
-      {thinkingInfo.progress !== undefined && thinkingInfo.progress > 0 && (
-        <div className="mt-3">
-          <div className="w-full bg-muted/50 rounded-full h-1 overflow-hidden">
-            <motion.div
-              className="bg-foreground/20 h-full rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: `${Math.min(100, thinkingInfo.progress)}%` }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
-            />
-          </div>
-        </div>
-      )}
     </motion.div>
   );
 };
@@ -129,7 +189,7 @@ const PurePreviewMessage = ({
   toolProgress?: Record<string, ToolProgress>;
 }) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
-  console.log(message);
+  console.log(thinkingInfo);
   return (
     <AnimatePresence>
       <motion.div
