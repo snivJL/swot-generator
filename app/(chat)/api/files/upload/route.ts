@@ -1,62 +1,42 @@
-import { put } from '@vercel/blob';
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
-
+import { handleUpload } from '@vercel/blob/client';
 import { auth } from '@/app/(auth)/auth';
 
-const FileSchema = z.object({
-  file: z
-    .instanceof(Blob)
-    .refine((file) => file.size <= 15 * 1024 * 1024, {
-      message: 'File size should be less than 15MB',
-    })
-    // Update the file type based on the kind of files you want to accept
-    .refine((file) => ['application/pdf'].includes(file.type), {
-      message: 'File type should be PDF',
-    }),
-});
-
+// This route implements the Vercel Blob client upload flow.
+// It handles two types of events:
+// - blob.generate-client-token (from the browser) -> returns a client token
+// - blob.upload-completed (from Vercel Blob) -> verifies signature and acknowledges
 export async function POST(request: Request) {
-  const session = await auth();
-
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  if (request.body === null) {
-    return new Response('Request body is empty', { status: 400 });
-  }
-
   try {
-    const formData = await request.formData();
-    const file = formData.get('file') as Blob;
+    const body = await request.json();
 
-    if (!file) {
-      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+    // Only enforce session auth for the client token generation step.
+    if (body?.type === 'blob.generate-client-token') {
+      const session = await auth();
+      if (!session) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
     }
 
-    const validatedFile = FileSchema.safeParse({ file });
-    if (!validatedFile.success) {
-      const errorMessage = validatedFile.error.errors
-        .map((error) => error.message)
-        .join(', ');
+    const result = await handleUpload({
+      request,
+      body,
+      // Enforce content-type and size limits here
+      onBeforeGenerateToken: async () => {
+        return {
+          allowedContentTypes: ['application/pdf'],
+          maximumSizeInBytes: 15 * 1024 * 1024, // 15MB
+          addRandomSuffix: true,
+          // cacheControlMaxAge: 60 * 60, // optionally 1 hour
+        };
+      },
+      onUploadCompleted: async ({ blob }) => {
+        // Optionally persist metadata or audit log here
+        // console.log('Blob upload completed:', blob);
+      },
+    });
 
-      return NextResponse.json({ error: errorMessage }, { status: 400 });
-    }
-
-    // Get filename from formData since Blob doesn't have name property
-    const filename = (formData.get('file') as File).name;
-    const fileBuffer = await file.arrayBuffer();
-
-    try {
-      const data = await put(`${filename}`, fileBuffer, {
-        access: 'public',
-      });
-
-      return NextResponse.json(data);
-    } catch (error) {
-      return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
-    }
+    return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(
       { error: 'Failed to process request' },

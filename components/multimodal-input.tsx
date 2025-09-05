@@ -14,6 +14,7 @@ import {
   memo,
 } from 'react';
 import { toast } from 'sonner';
+import { upload as uploadToBlob } from '@vercel/blob/client';
 import { useLocalStorage, useWindowSize } from 'usehooks-ts';
 import { ArrowUpIcon, PaperclipIcon, StopIcon } from './icons';
 import { Button } from './ui/button';
@@ -139,31 +140,23 @@ function PureMultimodalInput({
   ]);
 
   const uploadFile = async (file: File) => {
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
       setIsUploading(true);
-      const response = await fetch('/api/files/upload', {
-        method: 'POST',
-        body: formData,
+      const data = await uploadToBlob(file.name, file, {
+        access: 'public',
+        contentType: file.type,
+        handleUploadUrl: '/api/files/upload',
+        multipart: true,
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        const { url, pathname, contentType } = data;
-
-        return {
-          url,
-          name: pathname,
-          contentType: contentType,
-        };
-      }
-      const { error } = await response.json();
-      toast.error(error);
+      const { url, pathname, contentType } = data;
+      return {
+        url,
+        name: pathname,
+        contentType,
+      };
     } catch (error) {
-      // toast.error('Failed to upload file, please try again!');
-      toast.error(JSON.stringify(error));
+      toast.error('Failed to upload file, please try again!');
     } finally {
       setIsUploading(false);
     }
