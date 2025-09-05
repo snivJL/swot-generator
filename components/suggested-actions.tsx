@@ -228,7 +228,7 @@ function PureSuggestedActions({
     <div className="space-y-6">
       {!hasAttachment && (
         <div className="mx-6">
-          <div className="flex items-start gap-3 rounded-xl border bg-muted/40 px-4 py-3 text-sm bg-green-200">
+          <div className="flex items-start gap-3 rounded-xl border px-4 py-3 text-sm bg-green-200">
             <div className="mt-0.5 text-muted-foreground">
               <InfoIcon size={16} />
             </div>
