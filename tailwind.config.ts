@@ -72,6 +72,16 @@ const config: Config = {
           border: 'hsl(var(--sidebar-border))',
           ring: 'hsl(var(--sidebar-ring))',
         },
+
+        // Semantic brand colors
+        positive: {
+          DEFAULT: 'hsl(var(--positive))',
+          foreground: 'hsl(var(--positive-foreground))',
+        },
+        notice: {
+          DEFAULT: 'hsl(var(--notice))',
+          foreground: 'hsl(var(--notice-foreground))',
+        },
       },
     },
   },
