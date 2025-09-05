@@ -29,8 +29,7 @@ export const EnhancedThinkingMessage = ({
   const displayMessage = message || getDefaultMessage(currentToolCall);
 
   // Determine if we should show progress bar
-  const showProgress =
-    typeof progress === 'number' && progress >= 0 && progress <= 100;
+  const showProgress = typeof progress === 'number' && progress >= 0;
 
   // Get step-specific styling
   const stepColor = getStepColor(stepType);

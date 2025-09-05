@@ -111,9 +111,19 @@ function PureMultimodalInput({
 
   const submitForm = useCallback(() => {
     window.history.replaceState({}, '', `/chat/${chatId}`);
-    handleSubmit(undefined, {
-      experimental_attachments: attachments,
-    });
+    // Only include attachments on the first user message that sends them
+    const hasAttachedDocumentInHistory = messages.some(
+      (m) => m.role === 'user' && (m.experimental_attachments?.length ?? 0) > 0,
+    );
+
+    handleSubmit(
+      undefined,
+      hasAttachedDocumentInHistory
+        ? {}
+        : {
+            experimental_attachments: attachments,
+          },
+    );
     setLocalStorageInput('');
     resetHeight();
     if (width && width > 768) {
@@ -231,6 +241,7 @@ function PureMultimodalInput({
           append={append}
           chatId={chatId}
           attachments={attachments}
+          messages={messages}
           mode="initial"
         />
       ) : (
@@ -238,6 +249,7 @@ function PureMultimodalInput({
           append={append}
           chatId={chatId}
           attachments={attachments}
+          messages={messages}
           mode="drawer"
           isOpen={drawerOpen}
           onOpenChange={setDrawerOpen}

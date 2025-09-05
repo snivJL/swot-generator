@@ -20,7 +20,6 @@ import { MessageReasoning } from './message-reasoning';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import { DownloadLink } from './download-link';
 import Image from 'next/image';
-import { EnhancedThinkingMessage } from './thinking-message';
 
 interface GeneratedQuestion {
   content: string;
@@ -55,9 +54,6 @@ const PurePreviewMessage = ({
   reload,
   isReadonly,
   requiresScrollPadding,
-  generatedQuestions,
-  thinkingInfo,
-  toolProgress,
 }: {
   chatId: string;
   message: UIMessage;
@@ -68,11 +64,9 @@ const PurePreviewMessage = ({
   isReadonly: boolean;
   requiresScrollPadding: boolean;
   generatedQuestions?: Array<GeneratedQuestion>;
-  thinkingInfo?: ThinkingInfo;
   toolProgress?: Record<string, ToolProgress>;
 }) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
-  console.log(thinkingInfo);
   return (
     <AnimatePresence>
       <motion.div
@@ -109,9 +103,6 @@ const PurePreviewMessage = ({
               'min-h-96': message.role === 'assistant' && requiresScrollPadding,
             })}
           >
-            {/* Inline thinking indicator removed to avoid flicker during handoff.
-                We now render a single persistent EnhancedThinkingMessage panel in components/messages.tsx */}
-
             {message.parts?.map((part, index) => {
               const { type } = part;
               const key = `message-${message.id}-part-${index}`;
@@ -283,10 +274,6 @@ export const PreviewMessage = memo(
       return false;
     if (!equal(prevProps.message.parts, nextProps.message.parts)) return false;
     if (!equal(prevProps.vote, nextProps.vote)) return false;
-    if (!equal(prevProps.generatedQuestions, nextProps.generatedQuestions))
-      return false;
-    if (!equal(prevProps.thinkingInfo, nextProps.thinkingInfo)) return false;
-    if (!equal(prevProps.toolProgress, nextProps.toolProgress)) return false;
 
     return true;
   },

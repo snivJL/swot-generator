@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './ui/button';
 import { memo, useState } from 'react';
 import type { UseChatHelpers } from '@ai-sdk/react';
-import type { Attachment } from 'ai';
+import type { Attachment, UIMessage } from 'ai';
 import equal from 'fast-deep-equal';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from './ui/drawer';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
@@ -38,6 +38,7 @@ interface SuggestedActionsProps {
   chatId: string;
   append: UseChatHelpers['append'];
   attachments: Array<Attachment>;
+  messages: Array<UIMessage>;
   mode?: 'initial' | 'drawer';
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -152,6 +153,7 @@ function PureSuggestedActions({
   chatId,
   append,
   attachments,
+  messages,
   mode = 'initial',
   isOpen,
   onOpenChange,
@@ -159,6 +161,9 @@ function PureSuggestedActions({
   const [activeTab, setActiveTab] = useState(actionCategories[0].id);
 
   const hasAttachment = (attachments?.length ?? 0) > 0;
+  const alreadyAttachedInHistory = messages?.some(
+    (m) => m.role === 'user' && (m.experimental_attachments?.length ?? 0) > 0,
+  );
 
   const getActionDisabledReason = (
     category: ActionCategory,
@@ -180,11 +185,17 @@ function PureSuggestedActions({
 
   const handleActionClick = async (action: string) => {
     window.history.replaceState({}, '', `/chat/${chatId}`);
-    append({
+    const payload: Parameters<UseChatHelpers['append']>[0] = {
       role: 'user',
       content: action,
-      experimental_attachments: attachments,
-    });
+    };
+
+    // Only include attachments on the first message that sends them
+    if (!alreadyAttachedInHistory) {
+      (payload as any).experimental_attachments = attachments;
+    }
+
+    append(payload);
 
     if (mode === 'drawer' && onOpenChange) {
       onOpenChange(false);

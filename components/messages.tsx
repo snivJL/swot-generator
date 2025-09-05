@@ -3,14 +3,13 @@
 import type { UIMessage } from 'ai';
 import { PreviewMessage } from './message';
 import { Greeting } from './greeting';
-import { memo, Fragment, useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import type { Vote } from '@/lib/db/schema';
 import equal from 'fast-deep-equal';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import { motion } from 'framer-motion';
 import { useMessages } from '@/hooks/use-messages';
 import { EnhancedThinkingMessage } from './thinking-message';
-import type { ToolProgress } from './chat';
 interface EnhancedThinkingInfo {
   currentToolCall?: string;
   message: string;
@@ -36,8 +35,6 @@ interface MessagesProps {
   isReadonly: boolean;
   isArtifactVisible: boolean;
   enhancedThinkingInfo?: EnhancedThinkingInfo;
-  generatedQuestions?: Array<GeneratedQuestion>;
-  toolProgress?: Record<string, ToolProgress>;
 }
 
 function PureMessages({
@@ -49,8 +46,6 @@ function PureMessages({
   reload,
   isReadonly,
   enhancedThinkingInfo,
-  generatedQuestions,
-  toolProgress,
 }: MessagesProps) {
   const {
     containerRef: messagesContainerRef,
@@ -63,7 +58,7 @@ function PureMessages({
     status,
     messages,
   });
-
+  console.log(enhancedThinkingInfo);
   // Hide the thinking panel as soon as assistant starts streaming visible text
   const assistantHasText = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -71,7 +66,11 @@ function PureMessages({
       if (m?.role !== 'assistant') continue;
       const parts = m.parts ?? [];
       for (const p of parts as any[]) {
-        if (p?.type === 'text' && typeof p?.text === 'string' && p.text.trim().length > 0) {
+        if (
+          p?.type === 'text' &&
+          typeof p?.text === 'string' &&
+          p.text.trim().length > 0
+        ) {
           return true;
         }
       }
@@ -94,7 +93,8 @@ function PureMessages({
     return -1;
   }, [messages]);
 
-  const before = lastUserIndex >= 0 ? messages.slice(0, lastUserIndex + 1) : messages;
+  const before =
+    lastUserIndex >= 0 ? messages.slice(0, lastUserIndex + 1) : messages;
   const after = lastUserIndex >= 0 ? messages.slice(lastUserIndex + 1) : [];
 
   return (
@@ -122,10 +122,7 @@ function PureMessages({
             setMessages={setMessages}
             reload={reload}
             isReadonly={isReadonly}
-            thinkingInfo={undefined}
             requiresScrollPadding={hasSentMessage && isLastMessage}
-            generatedQuestions={generatedQuestions}
-            toolProgress={toolProgress}
           />
         );
       })}
@@ -147,7 +144,8 @@ function PureMessages({
       {after.map((message, offset) => {
         const index = (lastUserIndex >= 0 ? lastUserIndex + 1 : 0) + offset;
         const isLastMessage = index === messages.length - 1;
-        const isStreamingToThisMessage = status === 'streaming' && isLastMessage;
+        const isStreamingToThisMessage =
+          status === 'streaming' && isLastMessage;
 
         // While the thinking panel is visible, hide ALL assistant messages to
         // avoid flashes from placeholders or non-user-visible parts.
@@ -163,14 +161,10 @@ function PureMessages({
             setMessages={setMessages}
             reload={reload}
             isReadonly={isReadonly}
-            thinkingInfo={undefined}
             requiresScrollPadding={hasSentMessage && isLastMessage}
-            generatedQuestions={generatedQuestions}
-            toolProgress={toolProgress}
           />
         );
       })}
-
 
       {messages.length > 0 ? (
         <motion.div
@@ -193,9 +187,6 @@ export const Messages = memo(PureMessages, (prevProps, nextProps) => {
   if (!equal(prevProps.messages, nextProps.messages)) return false;
   if (!equal(prevProps.votes, nextProps.votes)) return false;
   if (!equal(prevProps.enhancedThinkingInfo, nextProps.enhancedThinkingInfo))
-    return false;
-  if (!equal(prevProps.toolProgress, nextProps.toolProgress)) return false;
-  if (!equal(prevProps.generatedQuestions, nextProps.generatedQuestions))
     return false;
 
   return true;

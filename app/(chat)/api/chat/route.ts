@@ -39,7 +39,6 @@ import { ChatSDKError } from '@/lib/errors';
 import { createSwot } from '@/lib/ai/tools/create-swot';
 import { generateQuestions } from '@/lib/ai/tools/generate-questions';
 import { dueDiligenceQuestions } from '@/lib/ai/tools/format-memo';
-import { entitlementsByUserType } from '@/lib/ai/entitlements';
 
 export const maxDuration = 300;
 

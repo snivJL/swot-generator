@@ -43,7 +43,9 @@ export async function middleware(request: NextRequest) {
     }
 
     const redirectUrl = encodeURIComponent(request.url);
-    return NextResponse.redirect(new URL(`/login?redirectUrl=${redirectUrl}`, request.url));
+    return NextResponse.redirect(
+      new URL(`/login?redirectUrl=${redirectUrl}`, request.url),
+    );
   }
 
   return NextResponse.next();
