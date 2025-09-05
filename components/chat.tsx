@@ -144,6 +144,8 @@ export function Chat({
   // Immediately set an optimistic thinking state on submit to avoid any visual gap
   useEffect(() => {
     if (status === 'submitted') {
+      // Submitting a message will create the chat server-side
+      setHasServerChat(true);
       const hasAttachedDocument = messages.some(
         (m) =>
           m.role === 'user' && (m.experimental_attachments?.length ?? 0) > 0,
@@ -301,6 +303,10 @@ export function Chat({
   );
 
   const [attachments, setAttachments] = useState<Array<Attachment>>([]);
+  // Gate server syncing until the chat exists on the server
+  const [hasServerChat, setHasServerChat] = useState<boolean>(
+    Boolean((initialMessages?.length ?? 0) > 0 || (initialAttachments?.length ?? 0) > 0),
+  );
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
 
   // Initialize attachments from server-provided chat value, then localStorage, then last user message
@@ -356,7 +362,9 @@ export function Chat({
 
   // Persist attachments to server per chat id
   useEffect(() => {
-    // Avoid firing on initial mount when attachments are empty and no initial attachments
+    // Skip syncing until the chat exists on the server
+    if (!hasServerChat) return;
+
     const controller = new AbortController();
     async function sync() {
       try {
@@ -367,19 +375,18 @@ export function Chat({
           signal: controller.signal,
         });
         if (!res.ok) {
-          toast({
-            type: 'error',
-            description: 'Failed to sync attachments. Changes may not persist.',
-          });
+          // Suppress expected 404s (e.g., brand new chats not yet persisted elsewhere)
+          if (res.status !== 404) {
+            toast({
+              type: 'error',
+              description: 'Failed to sync attachments. Changes may not persist.',
+            });
+          }
         }
       } catch (e) {
         // Ignore abort errors and surface others in console
         if ((e as any)?.name !== 'AbortError') {
           console.warn('Failed to sync chat attachments:', e);
-          toast({
-            type: 'error',
-            description: 'Failed to sync attachments. Changes may not persist.',
-          });
         }
       }
     }
@@ -389,7 +396,7 @@ export function Chat({
       clearTimeout(t);
       controller.abort();
     };
-  }, [attachments, id]);
+  }, [attachments, id, hasServerChat]);
 
   useAutoResume({
     autoResume,
