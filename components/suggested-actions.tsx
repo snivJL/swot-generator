@@ -6,11 +6,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './ui/button';
 import { memo, useState } from 'react';
 import type { UseChatHelpers } from '@ai-sdk/react';
-import type { Attachment } from 'ai';
+import type { Attachment, UIMessage } from 'ai';
 import equal from 'fast-deep-equal';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from './ui/drawer';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
-import { BarChart3, Search, Sparkles, TrendingUp, Shield } from 'lucide-react';
+import {
+  BarChart3,
+  Search,
+  TrendingUp,
+  Shield,
+  ArrowRight,
+  Lightbulb,
+} from 'lucide-react';
+import { InfoIcon } from './icons';
 import { cn } from '@/lib/utils';
 
 interface SuggestedAction {
@@ -30,6 +38,7 @@ interface SuggestedActionsProps {
   chatId: string;
   append: UseChatHelpers['append'];
   attachments: Array<Attachment>;
+  messages: Array<UIMessage>;
   mode?: 'initial' | 'drawer';
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -144,19 +153,49 @@ function PureSuggestedActions({
   chatId,
   append,
   attachments,
+  messages,
   mode = 'initial',
   isOpen,
   onOpenChange,
 }: SuggestedActionsProps) {
   const [activeTab, setActiveTab] = useState(actionCategories[0].id);
 
+  const hasAttachment = (attachments?.length ?? 0) > 0;
+  const alreadyAttachedInHistory = messages?.some(
+    (m) => m.role === 'user' && (m.experimental_attachments?.length ?? 0) > 0,
+  );
+
+  const getActionDisabledReason = (
+    category: ActionCategory,
+    action: SuggestedAction,
+  ): string | null => {
+    // Always require an attachment
+    if (!hasAttachment) return 'Attach a file to get started';
+
+    // Allow only: SWOT in Overview, and all actions in Due-diligence
+    const isDueDiligence = category.name === 'Due-diligence';
+    const isSwotInOverview =
+      category.name === 'Overview' &&
+      action.action === 'Conduct a SWOT analysis';
+
+    if (isDueDiligence || isSwotInOverview) return null;
+
+    return 'Demo: this prompt is disabled';
+  };
+
   const handleActionClick = async (action: string) => {
     window.history.replaceState({}, '', `/chat/${chatId}`);
-    append({
+    const payload: Parameters<UseChatHelpers['append']>[0] = {
       role: 'user',
       content: action,
-      experimental_attachments: attachments,
-    });
+    };
+
+    // Only include attachments on the first message that sends them
+    if (!alreadyAttachedInHistory) {
+      (payload as any).experimental_attachments = attachments;
+    }
+
+    append(payload);
 
     if (mode === 'drawer' && onOpenChange) {
       onOpenChange(false);
@@ -187,8 +226,29 @@ function PureSuggestedActions({
 
   const renderContent = ({ mode }: { mode?: 'initial' | 'drawer' }) => (
     <div className="space-y-6">
+      {!hasAttachment && (
+        <div className="mx-6">
+          <div className="flex items-start gap-3 rounded-xl border px-4 py-3 text-sm bg-green-200">
+            <div className="mt-0.5 text-muted-foreground">
+              <InfoIcon size={16} />
+            </div>
+            <div className="leading-relaxed">
+              <span className="font-medium">Attach a file to get started.</span>
+              <span className="ml-1 text-muted-foreground">
+                Prompts activate once a document is attached.
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-6">
+        <TabsList
+          className={cn(
+            'grid w-full grid-cols-4 mb-6 ite',
+            mode === 'drawer' &&
+              'sticky top-0 z-20 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b px-2 py-2',
+          )}
+        >
           {actionCategories.map((category) => (
             <TabsTrigger
               key={category.id}
@@ -215,7 +275,7 @@ function PureSuggestedActions({
                   animate="visible"
                   exit="hidden"
                   className={cn('grid gap-3', {
-                    'lg:grid-cols-2': mode === 'drawer',
+                    'sm:grid-cols-2 lg:grid-cols-2': mode === 'drawer',
                   })}
                 >
                   {category.actions.map((suggestedAction, actionIndex) => (
@@ -228,27 +288,54 @@ function PureSuggestedActions({
                       }}
                       whileTap={{ scale: 0.98 }}
                     >
-                      <Button
-                        variant="ghost"
-                        onClick={() =>
-                          handleActionClick(suggestedAction.action)
-                        }
-                        className="relative group text-left border rounded-xl px-4 py-4 text-sm w-full h-auto justify-start items-start hover:border-primary/20 hover:bg-gradient-to-br hover:from-background hover:to-muted/50 transition-all duration-300 min-h-[40px]"
-                      >
-                        <div className="flex items-start w-full">
-                          <div className="flex-1">
-                            <span className="font-medium block leading-relaxed text-foreground">
-                              {suggestedAction.question}
-                            </span>
-                          </div>
-                        </div>
+                      {(() => {
+                        const disabledReason = getActionDisabledReason(
+                          category,
+                          suggestedAction,
+                        );
+                        const isDisabled = Boolean(disabledReason);
+                        const CategoryIcon = category.icon;
+                        return (
+                          <Button
+                            variant="ghost"
+                            onClick={() =>
+                              handleActionClick(suggestedAction.action)
+                            }
+                            disabled={isDisabled}
+                            aria-disabled={isDisabled}
+                            title={disabledReason ?? undefined}
+                            className={cn(
+                              'relative group text-left border rounded-xl px-4 py-4 text-sm w-full h-full justify-start items-start hover:border-primary/20 hover:bg-gradient-to-br hover:from-background hover:to-muted/50 transition-all duration-300 min-h-[56px] shadow-sm hover:shadow',
+                              {
+                                'opacity-60 cursor-not-allowed hover:from-background hover:to-muted':
+                                  isDisabled,
+                              },
+                            )}
+                          >
+                            <div className="flex items-center w-full gap-3">
+                              <div className="flex-1">
+                                <span className="font-medium block leading-relaxed text-foreground">
+                                  {suggestedAction.question}
+                                </span>
+                                {isDisabled && (
+                                  <span className="mt-1 block text-xs text-muted-foreground">
+                                    {disabledReason}
+                                  </span>
+                                )}
+                              </div>
+                              {!isDisabled && (
+                                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                              )}
+                            </div>
 
-                        <motion.div
-                          className={`absolute inset-0 rounded-xl bg-gradient-to-r ${category.color} opacity-0 group-hover:opacity-5`}
-                          initial={false}
-                          transition={{ duration: 0.3 }}
-                        />
-                      </Button>
+                            <motion.div
+                              className={`absolute inset-0 rounded-xl bg-gradient-to-r ${category.color} opacity-0 group-hover:opacity-5`}
+                              initial={false}
+                              transition={{ duration: 0.3 }}
+                            />
+                          </Button>
+                        );
+                      })()}
                     </motion.div>
                   ))}
                 </motion.div>
@@ -263,14 +350,14 @@ function PureSuggestedActions({
   if (mode === 'drawer') {
     return (
       <Drawer open={isOpen} onOpenChange={onOpenChange}>
-        <DrawerContent className="max-h-[60vh]">
-          <DrawerHeader>
+        <DrawerContent className="max-h-[70vh] sm:max-h-[65vh]">
+          <DrawerHeader className="pb-3">
             <DrawerTitle className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5" />
-              Suggested Actions
+              <Lightbulb className="w-5 h-5" />
+              Suggested Prompts
             </DrawerTitle>
           </DrawerHeader>
-          <div className="px-4 pb-6 overflow-y-auto">
+          <div className="px-4 py-6 overflow-y-auto">
             {renderContent({ mode })}
           </div>
         </DrawerContent>

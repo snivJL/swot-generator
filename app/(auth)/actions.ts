@@ -3,12 +3,13 @@
 import { z } from 'zod';
 
 import { createUser, getUser } from '@/lib/db/queries';
+import { SIGNUP_WHITELIST } from '@/lib/constants';
 
 import { signIn } from './auth';
 
 const authFormSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(6),
+  password: z.string(),
 });
 
 export interface LoginActionState {
@@ -48,7 +49,8 @@ export interface RegisterActionState {
     | 'success'
     | 'failed'
     | 'user_exists'
-    | 'invalid_data';
+    | 'invalid_data'
+    | 'not_authorized';
 }
 
 export const register = async (
@@ -60,6 +62,12 @@ export const register = async (
       email: formData.get('email'),
       password: formData.get('password'),
     });
+
+    // Enforce signup whitelist (case-insensitive)
+    const email = String(validatedData.email).toLowerCase();
+    if (!SIGNUP_WHITELIST.has(email)) {
+      return { status: 'not_authorized' } as RegisterActionState;
+    }
 
     const [user] = await getUser(validatedData.email);
 

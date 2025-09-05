@@ -14,7 +14,7 @@ interface CreateDocumentProps {
 export const createSwot = ({ dataStream }: CreateDocumentProps) =>
   tool({
     description:
-      'Use this tool only when the user has confirmed he wants to export the SWOT you generated. The tool result will appear in a component, no need to explicit the link',
+      'Use this tool only when the user asks to conduct a SWOT analysis to generate a powerpoint presentation. The tool result will appear in a component, no need to explicit the link',
     parameters: z.object({
       title: z.string(),
       strengths: z
@@ -72,7 +72,7 @@ export const createSwot = ({ dataStream }: CreateDocumentProps) =>
         opportunities,
         threats,
       });
-      console.log('URL', url);
+
       dataStream.writeData({ type: 'finish', content: '' });
       return {
         id,

@@ -51,6 +51,7 @@ export function Chat({
   isReadonly,
   session,
   autoResume,
+  initialAttachments = [],
 }: {
   id: string;
   initialMessages: Array<UIMessage>;
@@ -59,6 +60,7 @@ export function Chat({
   isReadonly: boolean;
   session: Session;
   autoResume: boolean;
+  initialAttachments?: Array<Attachment>;
 }) {
   const { mutate } = useSWRConfig();
   const [toolCall, setToolCall] = useState<string>();
@@ -139,6 +141,34 @@ export function Chat({
     },
   });
 
+  // Immediately set an optimistic thinking state on submit to avoid any visual gap
+  useEffect(() => {
+    if (status === 'submitted') {
+      // Submitting a message will create the chat server-side
+      setHasServerChat(true);
+      const hasAttachedDocument = messages.some(
+        (m) =>
+          m.role === 'user' && (m.experimental_attachments?.length ?? 0) > 0,
+      );
+
+      setThinkingState((prev) => {
+        // If server already set thinking or we already set an initial one, keep it
+        if (prev.isThinking && prev.message) return prev;
+        return {
+          isThinking: true,
+          message: hasAttachedDocument
+            ? messages.length > 1
+              ? 'Getting relevant information from your document'
+              : 'Scanning your document'
+            : 'Analyzing your request',
+          stepType: 'processing',
+          status: 'start',
+          toolName: prev.toolName,
+        };
+      });
+    }
+  }, [status, messages]);
+
   // Handle data stream updates using the data array and useEffect
   useEffect(() => {
     if (!data || data.length === 0) return;
@@ -157,7 +187,7 @@ export function Chat({
       case 'thinking-start':
         setThinkingState({
           isThinking: true,
-          message: dataPart.content || 'Starting analysis...',
+          message: dataPart.content || 'Starting analysis',
           status: 'start',
         });
         break;
@@ -273,7 +303,100 @@ export function Chat({
   );
 
   const [attachments, setAttachments] = useState<Array<Attachment>>([]);
+  // Gate server syncing until the chat exists on the server
+  const [hasServerChat, setHasServerChat] = useState<boolean>(
+    Boolean((initialMessages?.length ?? 0) > 0 || (initialAttachments?.length ?? 0) > 0),
+  );
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
+
+  // Initialize attachments from server-provided chat value, then localStorage, then last user message
+  useEffect(() => {
+    try {
+      if (initialAttachments?.length) {
+        setAttachments(initialAttachments);
+        return;
+      }
+      const key = `chat:${id}:attachments`;
+      const stored =
+        typeof window !== 'undefined' ? window.localStorage.getItem(key) : null;
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setAttachments(parsed as Array<Attachment>);
+          return;
+        }
+      }
+
+      // Fallback: derive from the most recent user message that had attachments
+      const lastUserWithAttachments = [...initialMessages]
+        .reverse()
+        .find(
+          (m) =>
+            m.role === 'user' && (m.experimental_attachments?.length ?? 0) > 0,
+        );
+      if (lastUserWithAttachments?.experimental_attachments?.length) {
+        setAttachments(
+          (lastUserWithAttachments.experimental_attachments as Array<Attachment>) ??
+            [],
+        );
+      }
+    } catch (e) {
+      // noop; if parsing fails, keep default empty attachments
+      console.warn('Failed to restore attachments from storage:', e);
+    }
+    // run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist attachments per chat so they survive refresh and re-open
+  useEffect(() => {
+    try {
+      const key = `chat:${id}:attachments`;
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(key, JSON.stringify(attachments ?? []));
+      }
+    } catch (e) {
+      console.warn('Failed to persist attachments to storage:', e);
+    }
+  }, [attachments, id]);
+
+  // Persist attachments to server per chat id
+  useEffect(() => {
+    // Skip syncing until the chat exists on the server
+    if (!hasServerChat) return;
+
+    const controller = new AbortController();
+    async function sync() {
+      try {
+        const res = await fetch(`/api/chat`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chatId: id, attachments }),
+          signal: controller.signal,
+        });
+        if (!res.ok) {
+          // Suppress expected 404s (e.g., brand new chats not yet persisted elsewhere)
+          if (res.status !== 404) {
+            toast({
+              type: 'error',
+              description: 'Failed to sync attachments. Changes may not persist.',
+            });
+          }
+        }
+      } catch (e) {
+        // Ignore abort errors and surface others in console
+        if ((e as any)?.name !== 'AbortError') {
+          console.warn('Failed to sync chat attachments:', e);
+        }
+      }
+    }
+    // Debounce slightly to avoid rapid updates
+    const t = setTimeout(sync, 150);
+    return () => {
+      clearTimeout(t);
+      controller.abort();
+    };
+  }, [attachments, id, hasServerChat]);
 
   useAutoResume({
     autoResume,
@@ -340,8 +463,6 @@ export function Chat({
           isReadonly={isReadonly}
           isArtifactVisible={isArtifactVisible}
           enhancedThinkingInfo={enhancedThinkingInfo}
-          generatedQuestions={generatedQuestions}
-          toolProgress={toolProgress}
         />
 
         <form className="flex mx-auto px-4 bg-background pb-4 md:pb-6 gap-2 w-full md:max-w-3xl">

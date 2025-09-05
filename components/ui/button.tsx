@@ -18,6 +18,13 @@ const buttonVariants = cva(
           'bg-secondary text-secondary-foreground hover:bg-secondary/80',
         ghost: 'hover:bg-accent hover:text-accent-foreground',
         link: 'text-primary underline-offset-4 hover:underline',
+        positive:
+          'bg-positive text-positive-foreground hover:bg-positive/90',
+        notice: 'bg-notice text-notice-foreground hover:bg-notice/90',
+        outlinePositive:
+          'border border-positive text-positive hover:bg-positive/10',
+        outlineNotice:
+          'border border-notice text-notice hover:bg-notice/10',
       },
       size: {
         default: 'h-10 px-4 py-2',

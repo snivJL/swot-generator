@@ -21,9 +21,6 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
   const session = await auth();
 
   if (!session) {
-    if (isTestEnvironment) {
-      redirect('/api/auth/guest');
-    }
     redirect('/login');
   }
 
@@ -65,6 +62,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
           initialMessages={convertToUIMessages(messagesFromDb)}
           initialChatModel={DEFAULT_CHAT_MODEL}
           initialVisibilityType={chat.visibility}
+          initialAttachments={(chat.attachments as Array<Attachment>) ?? []}
           isReadonly={session?.user?.id !== chat.userId}
           session={session}
           autoResume={true}
@@ -81,6 +79,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         initialMessages={convertToUIMessages(messagesFromDb)}
         initialChatModel={chatModelFromCookie.value}
         initialVisibilityType={chat.visibility}
+        initialAttachments={(chat.attachments as Array<Attachment>) ?? []}
         isReadonly={session?.user?.id !== chat.userId}
         session={session}
         autoResume={true}

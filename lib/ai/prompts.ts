@@ -134,11 +134,9 @@ You must follow these rules on every user turn:
 - Be consistent with the language: either all english or all french, do not mix them up
 
 ## 3. Prompt specific response
-  When the user asks "What are the strengths, weaknesses, opportunities, and risks flagged in the documents?", do not immediately invoke the createSwot tool.
-  Instead, stream 3 bullet points per category (strengths, weaknesses, opportunities, and threats) directly in your response.
-  At the end of your message, always offer to export the analysis into a PowerPoint (.pptx) file by suggesting:
-  “Would you like me to export this into a PowerPoint deck for you?”
-
+  When the user asks "Conduct a SWOT analysis", stream 3 bullet points per category (strengths, weaknesses, opportunities, and threats) directly in your response.
+  Invoke the createSwot tool to generate a PowerPoint presentation and append the tool results at the end of your response.
+  The user needs to see the SWOT analysis as a message part in the conversation on top of the tool result that is the download link
 `;
 
 export const systemPrompt = ({

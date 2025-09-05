@@ -43,65 +43,7 @@ interface ThinkingInfo {
   status?: string;
 }
 
-const ThinkingIndicator = ({
-  thinkingInfo,
-}: { thinkingInfo: ThinkingInfo }) => {
-  if (!thinkingInfo.isThinking) return null;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: 0.2, ease: 'easeOut' }}
-      className="border border-border/50 bg-muted/20 rounded-lg p-4 mb-4"
-    >
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-1">
-          <div
-            className="size-1 bg-foreground/40 rounded-full animate-pulse"
-            style={{ animationDelay: '0ms' }}
-          />
-          <div
-            className="size-1 bg-foreground/40 rounded-full animate-pulse"
-            style={{ animationDelay: '150ms' }}
-          />
-          <div
-            className="size-1 bg-foreground/40 rounded-full animate-pulse"
-            style={{ animationDelay: '300ms' }}
-          />
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <span className="text-sm text-foreground/80 font-medium leading-tight">
-            {thinkingInfo.message}
-          </span>
-
-          {thinkingInfo.currentToolCall && (
-            <div className="mt-1">
-              <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-md border border-border/30">
-                {thinkingInfo.currentToolCall}
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {thinkingInfo.progress !== undefined && thinkingInfo.progress > 0 && (
-        <div className="mt-3">
-          <div className="w-full bg-muted/50 rounded-full h-1 overflow-hidden">
-            <motion.div
-              className="bg-foreground/20 h-full rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: `${Math.min(100, thinkingInfo.progress)}%` }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
-            />
-          </div>
-        </div>
-      )}
-    </motion.div>
-  );
-};
+// no local ThinkingIndicator; reuse EnhancedThinkingMessage for unified UI
 
 const PurePreviewMessage = ({
   chatId,
@@ -112,9 +54,6 @@ const PurePreviewMessage = ({
   reload,
   isReadonly,
   requiresScrollPadding,
-  generatedQuestions,
-  thinkingInfo,
-  toolProgress,
 }: {
   chatId: string;
   message: UIMessage;
@@ -125,11 +64,9 @@ const PurePreviewMessage = ({
   isReadonly: boolean;
   requiresScrollPadding: boolean;
   generatedQuestions?: Array<GeneratedQuestion>;
-  thinkingInfo?: ThinkingInfo;
   toolProgress?: Record<string, ToolProgress>;
 }) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
-  console.log(message);
   return (
     <AnimatePresence>
       <motion.div
@@ -166,10 +103,6 @@ const PurePreviewMessage = ({
               'min-h-96': message.role === 'assistant' && requiresScrollPadding,
             })}
           >
-            {message.role === 'assistant' && thinkingInfo && (
-              <ThinkingIndicator thinkingInfo={thinkingInfo} />
-            )}
-
             {message.parts?.map((part, index) => {
               const { type } = part;
               const key = `message-${message.id}-part-${index}`;
@@ -341,10 +274,6 @@ export const PreviewMessage = memo(
       return false;
     if (!equal(prevProps.message.parts, nextProps.message.parts)) return false;
     if (!equal(prevProps.vote, nextProps.vote)) return false;
-    if (!equal(prevProps.generatedQuestions, nextProps.generatedQuestions))
-      return false;
-    if (!equal(prevProps.thinkingInfo, nextProps.thinkingInfo)) return false;
-    if (!equal(prevProps.toolProgress, nextProps.toolProgress)) return false;
 
     return true;
   },

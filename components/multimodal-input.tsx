@@ -22,7 +22,7 @@ import { SuggestedActions } from './suggested-actions';
 import equal from 'fast-deep-equal';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowDown, Loader, Sparkles } from 'lucide-react';
+import { ArrowDown, Loader, Lightbulb } from 'lucide-react';
 import { useScrollToBottom } from '@/hooks/use-scroll-to-bottom';
 
 function PureMultimodalInput({
@@ -111,9 +111,19 @@ function PureMultimodalInput({
 
   const submitForm = useCallback(() => {
     window.history.replaceState({}, '', `/chat/${chatId}`);
-    handleSubmit(undefined, {
-      experimental_attachments: attachments,
-    });
+    // Only include attachments on the first user message that sends them
+    const hasAttachedDocumentInHistory = messages.some(
+      (m) => m.role === 'user' && (m.experimental_attachments?.length ?? 0) > 0,
+    );
+
+    handleSubmit(
+      undefined,
+      hasAttachedDocumentInHistory
+        ? {}
+        : {
+            experimental_attachments: attachments,
+          },
+    );
     setLocalStorageInput('');
     resetHeight();
     if (width && width > 768) {
@@ -202,7 +212,7 @@ function PureMultimodalInput({
   return (
     <div className="relative w-full flex flex-col gap-4">
       <AnimatePresence>
-        {!isAtBottom && (
+        {messages.length > 0 && !isAtBottom && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -231,6 +241,7 @@ function PureMultimodalInput({
           append={append}
           chatId={chatId}
           attachments={attachments}
+          messages={messages}
           mode="initial"
         />
       ) : (
@@ -238,6 +249,7 @@ function PureMultimodalInput({
           append={append}
           chatId={chatId}
           attachments={attachments}
+          messages={messages}
           mode="drawer"
           isOpen={drawerOpen}
           onOpenChange={setDrawerOpen}
@@ -261,6 +273,9 @@ function PureMultimodalInput({
         placeholder="Send a message..."
         value={input}
         onChange={handleInput}
+        disabled
+        aria-disabled
+        title="Free text is disabled in this demo. Use suggested prompts."
         className={cx(
           'min-h-[24px] max-h-[calc(75dvh)] overflow-hidden resize-none rounded-2xl !text-base bg-muted pb-10 dark:border-zinc-700',
           className,
@@ -304,11 +319,14 @@ function PureMultimodalInput({
               <Button
                 type="button"
                 onClick={() => setDrawerOpen(true)}
-                className="rounded-md p-[7px] h-fit dark:border-zinc-700 hover:dark:bg-zinc-900 hover:bg-zinc-200"
-                variant="ghost"
+                className="rounded-full h-8 px-3 gap-2 dark:border-zinc-700"
+                variant="outline"
                 size="sm"
+                title="Open suggested prompts"
+                data-testid="open-suggested-actions"
               >
-                <Sparkles className="w-4 h-4" />
+                <Lightbulb className="w-4 h-4" />
+                <span className="text-sm font-medium">Prompts</span>
               </Button>
             </motion.div>
           )}

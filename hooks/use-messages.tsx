@@ -39,7 +39,6 @@ export function useMessages({
   }, [status]);
 
   useEffect(() => {
-    console.log(isAtBottom);
     if (
       messages.length > 0 &&
       isAtBottom &&

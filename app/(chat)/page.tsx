@@ -11,9 +11,6 @@ export default async function Page() {
   const session = await auth();
 
   if (!session) {
-    if (isTestEnvironment) {
-      redirect('/api/auth/guest');
-    }
     redirect('/login');
   }
 

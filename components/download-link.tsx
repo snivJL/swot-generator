@@ -66,7 +66,6 @@ export function DownloadLink({
         return 'text-gray-700 hover:text-gray-800';
     }
   };
-  console.log(url);
 
   return (
     <AnimatePresence>
