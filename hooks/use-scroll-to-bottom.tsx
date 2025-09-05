@@ -32,7 +32,9 @@ export function useScrollToBottom(isStreaming?: boolean) {
 
     observerRef.current = new IntersectionObserver(
       (entries) => {
-        const entry = entries[0];
+        // Use the most recent entry. When multiple thresholds
+        // trigger in a single tick, entries[0] can be stale.
+        const entry = entries[entries.length - 1];
         if (entry.isIntersecting) {
           // Clear any pending timeout
           if (timeoutRef.current) {
@@ -51,7 +53,8 @@ export function useScrollToBottom(isStreaming?: boolean) {
           timeoutRef.current = setTimeout(() => {
             if (observerRef.current) {
               const currentEntries = observerRef.current.takeRecords();
-              const latestEntry = currentEntries[0] || entry;
+              const latestEntry =
+                currentEntries[currentEntries.length - 1] || entry;
               if (!latestEntry.isIntersecting) {
                 setIsAtBottom(false);
               }

@@ -244,7 +244,7 @@ function PureSuggestedActions({
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList
           className={cn(
-            'grid w-full grid-cols-4 mb-6',
+            'grid w-full grid-cols-4 mb-6 ite',
             mode === 'drawer' &&
               'sticky top-0 z-20 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b px-2 py-2',
           )}
@@ -305,7 +305,7 @@ function PureSuggestedActions({
                             aria-disabled={isDisabled}
                             title={disabledReason ?? undefined}
                             className={cn(
-                              'relative group text-left border rounded-xl px-4 py-4 text-sm w-full h-auto justify-start items-start hover:border-primary/20 hover:bg-gradient-to-br hover:from-background hover:to-muted/50 transition-all duration-300 min-h-[56px] shadow-sm hover:shadow',
+                              'relative group text-left border rounded-xl px-4 py-4 text-sm w-full h-full justify-start items-start hover:border-primary/20 hover:bg-gradient-to-br hover:from-background hover:to-muted/50 transition-all duration-300 min-h-[56px] shadow-sm hover:shadow',
                               {
                                 'opacity-60 cursor-not-allowed hover:from-background hover:to-muted':
                                   isDisabled,
