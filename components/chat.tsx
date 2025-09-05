@@ -141,6 +141,32 @@ export function Chat({
     },
   });
 
+  // Immediately set an optimistic thinking state on submit to avoid any visual gap
+  useEffect(() => {
+    if (status === 'submitted') {
+      const hasAttachedDocument = messages.some(
+        (m) =>
+          m.role === 'user' && (m.experimental_attachments?.length ?? 0) > 0,
+      );
+
+      setThinkingState((prev) => {
+        // If server already set thinking or we already set an initial one, keep it
+        if (prev.isThinking && prev.message) return prev;
+        return {
+          isThinking: true,
+          message: hasAttachedDocument
+            ? messages.length > 1
+              ? 'Getting relevant information from your document'
+              : 'Scanning your document'
+            : 'Analyzing your request',
+          stepType: 'processing',
+          status: 'start',
+          toolName: prev.toolName,
+        };
+      });
+    }
+  }, [status, messages]);
+
   // Handle data stream updates using the data array and useEffect
   useEffect(() => {
     if (!data || data.length === 0) return;
@@ -159,7 +185,7 @@ export function Chat({
       case 'thinking-start':
         setThinkingState({
           isThinking: true,
-          message: dataPart.content || 'Starting analysis...',
+          message: dataPart.content || 'Starting analysis',
           status: 'start',
         });
         break;

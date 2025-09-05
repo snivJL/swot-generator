@@ -95,9 +95,9 @@ export async function POST(request: Request) {
       differenceInHours: 24,
     });
 
-    if (messageCount > entitlementsByUserType[userType].maxMessagesPerDay) {
-      return new ChatSDKError('rate_limit:chat').toResponse();
-    }
+    // if (messageCount > entitlementsByUserType[userType].maxMessagesPerDay) {
+    //   return new ChatSDKError('rate_limit:chat').toResponse();
+    // }
 
     const chat = await getChatById({ id });
     if (!chat) {
@@ -150,9 +150,9 @@ export async function POST(request: Request) {
           type: 'thinking-start',
           content: hasAttachedDocument
             ? messages.length > 1
-              ? `Getting relevant information from your document...`
-              : 'Scanning your document...'
-            : 'Analyzing your request...',
+              ? `Getting relevant information from your document`
+              : 'Scanning your document'
+            : 'Analyzing your request',
         });
 
         const result = streamText({
@@ -180,19 +180,19 @@ export async function POST(request: Request) {
             if (finishReason === 'stop') {
               dataStream.writeData({
                 type: 'thinking-update',
-                content: 'Finalizing response...',
+                content: 'Finalizing response',
                 stepType: 'completion',
               });
             } else if (finishReason === 'tool-calls') {
               dataStream.writeData({
                 type: 'thinking-update',
-                content: 'Processing tool results and finalizing response...',
+                content: 'Processing tool results and finalizing response',
                 stepType: 'processing',
               });
             } else if (text?.trim()) {
               dataStream.writeData({
                 type: 'thinking-update',
-                content: 'Generating response...',
+                content: 'Generating response',
                 stepType: 'generate',
               });
             }

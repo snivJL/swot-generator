@@ -114,7 +114,7 @@ export const generateQuestions = ({ dataStream }: CreateDocumentProps) =>
 
       dataStream.writeData({
         type: 'tool-progress',
-        content: 'Setting up question framework...',
+        content: 'Setting up question framework',
         toolName: 'generateQuestions',
         progress: 0,
       });
@@ -126,7 +126,7 @@ export const generateQuestions = ({ dataStream }: CreateDocumentProps) =>
 
       dataStream.writeData({
         type: 'tool-progress',
-        content: 'Analyzing document for relevant categories...',
+        content: 'Analyzing document for relevant categories',
         toolName: 'generateQuestions',
         progress: 15,
       });
@@ -138,7 +138,7 @@ export const generateQuestions = ({ dataStream }: CreateDocumentProps) =>
 
       dataStream.writeData({
         type: 'tool-progress',
-        content: 'Selecting most relevant template questions...',
+        content: 'Selecting most relevant template questions',
         toolName: 'generateQuestions',
         progress: 40,
       });
@@ -161,7 +161,7 @@ export const generateQuestions = ({ dataStream }: CreateDocumentProps) =>
 
       dataStream.writeData({
         type: 'tool-progress',
-        content: 'Generating custom questions for identified gaps...',
+        content: 'Generating custom questions for identified gaps',
         toolName: 'generateQuestions',
         progress: 70,
       });

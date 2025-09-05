@@ -8,6 +8,9 @@ interface EnhancedThinkingMessageProps {
   progress?: number;
   stepType?: string;
   status?: string;
+  variant?: 'full' | 'inline';
+  showAvatar?: boolean;
+  className?: string;
 }
 
 export const EnhancedThinkingMessage = ({
@@ -16,6 +19,9 @@ export const EnhancedThinkingMessage = ({
   progress,
   stepType,
   status,
+  variant = 'full',
+  showAvatar,
+  className,
 }: EnhancedThinkingMessageProps) => {
   const role = 'assistant';
 
@@ -29,47 +35,43 @@ export const EnhancedThinkingMessage = ({
   // Get step-specific styling
   const stepColor = getStepColor(stepType);
 
+  const containerClasses = cx(
+    variant === 'full' && 'w-full mx-auto max-w-3xl px-4 group/message',
+    variant === 'inline' &&
+      'border border-border/50 bg-muted/20 rounded-lg p-3',
+    className,
+  );
+
+  const rowClasses = cx(
+    'flex gap-4 group-data-[role=user]/message:px-3 w-full group-data-[role=user]/message:w-fit group-data-[role=user]/message:ml-auto group-data-[role=user]/message:max-w-2xl group-data-[role=user]/message:py-2 rounded-xl',
+    { 'group-data-[role=user]/message:bg-muted': variant === 'full' },
+  );
+
+  const shouldShowAvatar = showAvatar ?? variant === 'full';
+
   return (
     <motion.div
       data-testid="message-assistant-loading"
-      className="w-full mx-auto max-w-3xl px-4 group/message"
+      className={containerClasses}
       initial={{ y: 5, opacity: 0 }}
       animate={{ y: 0, opacity: 1, transition: { delay: 0.1 } }}
       data-role={role}
+      role="status"
+      aria-live="polite"
     >
-      <div
-        className={cx(
-          'flex gap-4 group-data-[role=user]/message:px-3 w-full group-data-[role=user]/message:w-fit group-data-[role=user]/message:ml-auto group-data-[role=user]/message:max-w-2xl group-data-[role=user]/message:py-2 rounded-xl',
-          {
-            'group-data-[role=user]/message:bg-muted': true,
-          },
-        )}
-      >
+      <div className={rowClasses}>
         {/* Enhanced avatar with tool indication */}
-        <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-background">
-          <Image
-            src="/logo-sm.svg"
-            alt="kornelia logo"
-            width={60}
-            height={60}
-            className="rounded-full"
-          />
-          {/* Tool indicator overlay */}
-          {currentToolCall && (
-            <motion.div
-              className="absolute -bottom-1 -right-1 size-3 rounded-full"
-              style={{ backgroundColor: stepColor }}
-              animate={{
-                scale: [1, 1.2, 1],
-              }}
-              transition={{
-                duration: 2,
-                repeat: Number.POSITIVE_INFINITY,
-                ease: 'easeInOut',
-              }}
+        {shouldShowAvatar && (
+          <div className="relative size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-background">
+            <Image
+              src="/logo-sm.svg"
+              alt="kornelia logo"
+              width={60}
+              height={60}
+              className="rounded-full"
             />
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="flex flex-col gap-3 py-2 flex-1">
           {/* Main thinking message */}
@@ -127,8 +129,8 @@ export const EnhancedThinkingMessage = ({
             </motion.div>
           )}
 
-          {/* Step type indicator */}
-          {stepType && (
+          {/* Step type indicator and status */}
+          {(stepType || status || currentToolCall) && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -138,10 +140,23 @@ export const EnhancedThinkingMessage = ({
                 className="w-2 h-2 rounded-full"
                 style={{ backgroundColor: stepColor }}
               />
-              <span className="text-xs text-muted-foreground/70 capitalize">
-                {stepType.replace(/-/g, ' ')}
-                {currentToolCall && ` • ${getToolDisplayName(currentToolCall)}`}
-              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                {stepType && (
+                  <span className="text-xs text-muted-foreground/70 capitalize">
+                    {stepType.replace(/-/g, ' ')}
+                  </span>
+                )}
+                {currentToolCall && (
+                  <span className="text-xs text-muted-foreground/80 bg-muted/50 px-2 py-0.5 rounded-md border border-border/30">
+                    {getToolDisplayName(currentToolCall)}
+                  </span>
+                )}
+                {status && (
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70 bg-muted/40 px-1.5 py-0.5 rounded border border-border/30">
+                    {status}
+                  </span>
+                )}
+              </div>
             </motion.div>
           )}
         </div>
@@ -154,17 +169,17 @@ export const EnhancedThinkingMessage = ({
 function getDefaultMessage(currentToolCall?: string): string {
   switch (currentToolCall) {
     case 'createMemo':
-      return 'Creating memo...';
+      return 'Creating memo';
     case 'createSwot':
-      return 'Creating SWOT analysis...';
+      return 'Creating SWOT analysis';
     case 'formatMemo':
-      return 'Formatting memo...';
+      return 'Formatting memo';
     case 'generateQuestions':
-      return 'Generating questions...';
+      return 'Generating questions';
     case 'addResource':
-      return 'Adding information...';
+      return 'Adding information';
     default:
-      return 'Thinking...';
+      return 'Analyzing your request';
   }
 }
 
